@@ -181,22 +181,31 @@ class AdminSyncService:
             date_str = datetime.now().strftime("%d.%m.%Y")
         shifts = await self.shifts.list_by_date(date_str)
         headers = [
-            "assistant_id",
-            "assistant_name",
             "doctor_name",
+            "scheduled_assistant_name",
+            "assistant_name",
             "date",
             "type",
+            "speciality",
+            "cabinet",
             "manual",
         ]
 
         def serialize():
             for shift in shifts:
+                shift_type = shift.type
+                if shift_type == "morning":
+                    shift_type = "утренняя"
+                elif shift_type == "evening":
+                    shift_type = "вечерняя"
                 row = [
-                    shift.assistant_id,
-                    shift.assistant_name or "",
                     shift.doctor_name,
+                    shift.scheduled_assistant_name or "",
+                    shift.assistant_name or "",
                     shift.date,
-                    shift.type,
+                    shift_type,
+                    shift.speciality or "",
+                    shift.cabinet or "",
                     "Да" if shift.manual else "Нет",
                 ]
                 yield ["" if v is None else str(v) for v in row]
