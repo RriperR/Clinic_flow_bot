@@ -42,9 +42,14 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             )
             return
 
-        free_shifts = await shift_service.list_free_shifts(date_str, shift_type)
+        free_shifts = await shift_service.list_free_shifts(
+            date_str, shift_type, worker.full_name
+        )
         if not free_shifts:
-            await message.answer("Свободных смен не осталось")
+            await message.answer(
+                "Свободных смен не осталось",
+                reply_markup=build_shift_keyboard([]),
+            )
             return
         await message.answer(
             "Выберите доктора:",
@@ -100,31 +105,37 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             await callback.message.edit_text("Смена отменена")
         await callback.answer()
 
-    @router.message(Command("shift_any"))
-    async def manual_shift(message: Message):
-        shift_type, date_str = shift_service.guess_shift_type_from_now()
+    @router.callback_query(F.data == "shift_show_all")
+    async def show_all_doctors(callback: CallbackQuery):
+        now = datetime.now()
+        shift_type = detect_shift_type(now.hour)
         if not shift_type:
-            await message.answer("Записываться на смену можно с 08:00 до 20:00")
-            return
-
-        worker = await shift_service.get_worker(message.from_user.id)
-        if not worker:
-            await message.answer("Мы не нашли вас в базе, сначала зарегистрируйтесь")
-            return
-
-        current_shift = await shift_service.get_current_shift(worker.id, date_str, shift_type)
-        if current_shift:
-            await message.answer(
-                f"У вас уже есть смена с {current_shift.doctor_name}",
-                reply_markup=build_cancel_shift_keyboard(shift_type),
+            await callback.answer(
+                "Записываться на смену можно с 08:00 до 20:00", show_alert=True
             )
             return
 
+        worker = await shift_service.get_worker(callback.from_user.id)
+        if not worker:
+            await callback.answer("Мы не нашли вас в базе", show_alert=True)
+            return
+
+        date_str = now.strftime("%d.%m.%Y")
+        current_shift = await shift_service.get_current_shift(worker.id, date_str, shift_type)
+        if current_shift:
+            await callback.message.edit_text(
+                f"У вас уже есть смена с {current_shift.doctor_name}",
+                reply_markup=build_cancel_shift_keyboard(shift_type),
+            )
+            await callback.answer()
+            return
+
         workers = await shift_service.list_all_doctors()
-        await message.answer(
+        await callback.message.edit_text(
             "Выберите доктора:",
             reply_markup=build_all_doctors_keyboard(workers, page=0),
         )
+        await callback.answer()
 
     @router.callback_query(DoctorsPage.filter())
     async def doctors_paginate(cb: CallbackQuery, callback_data: DoctorsPage):

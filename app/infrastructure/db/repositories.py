@@ -248,14 +248,26 @@ class SqlAlchemyShiftRepository(ShiftRepository):
             await session.execute(delete(ShiftModel))
             await session.commit()
 
-    async def bulk_insert(self, records: list[tuple[str, str, str]]) -> None:
+    async def bulk_insert(
+        self, records: list[tuple[str, str, str, str | None, str | None, str | None]]
+    ) -> None:
         async with async_session() as session:
-            for doctor_name, date, shift_type in records:
+            for (
+                doctor_name,
+                date,
+                shift_type,
+                scheduled_assistant_name,
+                speciality,
+                cabinet,
+            ) in records:
                 session.add(
                     ShiftModel(
                         doctor_name=doctor_name,
                         date=date,
                         type=shift_type,
+                        scheduled_assistant_name=scheduled_assistant_name,
+                        speciality=speciality,
+                        cabinet=cabinet,
                         manual=False,
                     )
                 )

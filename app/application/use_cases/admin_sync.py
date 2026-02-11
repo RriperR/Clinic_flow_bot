@@ -109,16 +109,36 @@ class AdminSyncService:
 
     async def sync_shifts(self) -> int:
         rows = self.gateway.read_shifts()
-        schedule: list[tuple[str, str, str]] = []
+        schedule: list[tuple[str, str, str, str | None, str | None, str | None]] = []
         for row in rows:
-            if len(row) < 3:
+            if len(row) < 7:
                 continue
-            doctor_name = row[0].strip()
-            date = row[1].strip()
-            shift_type = row[2].strip()
-            if not doctor_name or not date or not shift_type:
+            shift_code = row[1].strip()
+            date = row[2].strip()
+            doctor_name = row[3].strip()
+            assistant_planned = row[4].strip()
+            speciality = row[5].strip()
+            cabinet = row[6].strip()
+            if shift_code == "1":
+                shift_type = "morning"
+            elif shift_code == "2":
+                shift_type = "evening"
+            else:
                 continue
-            schedule.append((doctor_name, date, shift_type))
+            if not doctor_name or not date:
+                continue
+            if assistant_planned == "-----------":
+                assistant_planned = ""
+            schedule.append(
+                (
+                    doctor_name,
+                    date,
+                    shift_type,
+                    assistant_planned or None,
+                    speciality or None,
+                    cabinet or None,
+                )
+            )
         if schedule:
             await self.shifts.bulk_insert(schedule)
         return len(schedule)
@@ -161,22 +181,31 @@ class AdminSyncService:
             date_str = datetime.now().strftime("%d.%m.%Y")
         shifts = await self.shifts.list_by_date(date_str)
         headers = [
-            "assistant_id",
-            "assistant_name",
             "doctor_name",
+            "scheduled_assistant_name",
+            "assistant_name",
             "date",
             "type",
+            "speciality",
+            "cabinet",
             "manual",
         ]
 
         def serialize():
             for shift in shifts:
+                shift_type = shift.type
+                if shift_type == "morning":
+                    shift_type = "утренняя"
+                elif shift_type == "evening":
+                    shift_type = "вечерняя"
                 row = [
-                    shift.assistant_id,
-                    shift.assistant_name or "",
                     shift.doctor_name,
+                    shift.scheduled_assistant_name or "",
+                    shift.assistant_name or "",
                     shift.date,
-                    shift.type,
+                    shift_type,
+                    shift.speciality or "",
+                    shift.cabinet or "",
                     "Да" if shift.manual else "Нет",
                 ]
                 yield ["" if v is None else str(v) for v in row]

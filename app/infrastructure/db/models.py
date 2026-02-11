@@ -97,6 +97,9 @@ class Shift(Base):
     doctor_name = Column(Text)
     date = Column(String(31))
     type = Column(String(10))
+    scheduled_assistant_name = Column(Text, nullable=True)
+    speciality = Column(Text, nullable=True)
+    cabinet = Column(Text, nullable=True)
     assistant_name = Column(Text, nullable=True)
     manual = Column(Boolean, default=False)
 
