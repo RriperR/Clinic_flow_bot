@@ -72,6 +72,9 @@ class Shift:
     doctor_name: str
     date: str
     type: str
+    scheduled_assistant_name: str | None = None
+    speciality: str | None = None
+    cabinet: str | None = None
     assistant_name: str | None = None
     manual: bool = False
 

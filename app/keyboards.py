@@ -66,12 +66,19 @@ async def build_int_keyboard(question_index) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def build_shift_keyboard(shifts: list[tuple[int, str]]) -> InlineKeyboardMarkup:
+def build_shift_keyboard(
+    shifts: list[tuple[int, str]], include_show_all: bool = True
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for shift_id, name in shifts:
         builder.button(
             text=name,
             callback_data=f"select_shift:{shift_id}",
+        )
+    if include_show_all:
+        builder.button(
+            text="Показать всех врачей",
+            callback_data="shift_show_all",
         )
     builder.adjust(1)
     return builder.as_markup()
@@ -108,7 +115,9 @@ def build_instrument_keyboard(instruments: Sequence[Instrument]) -> InlineKeyboa
 PER_PAGE = 10
 
 
-def build_all_doctors_keyboard(workers: Sequence[Worker], page: int = 0) -> InlineKeyboardMarkup:
+def build_all_doctors_keyboard(
+    workers: Sequence[Worker], page: int = 0
+) -> InlineKeyboardMarkup:
     total = len(workers)
     start = page * PER_PAGE
     end = min(start + PER_PAGE, total)

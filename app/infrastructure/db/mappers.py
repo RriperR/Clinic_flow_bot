@@ -179,6 +179,9 @@ def to_shift_entity(model: ShiftModel | None) -> ShiftEntity | None:
         doctor_name=model.doctor_name,
         date=model.date,
         type=model.type,
+        scheduled_assistant_name=model.scheduled_assistant_name,
+        speciality=model.speciality,
+        cabinet=model.cabinet,
         assistant_name=model.assistant_name,
         manual=model.manual,
     )
@@ -191,6 +194,9 @@ def from_shift_entity(entity: ShiftEntity) -> ShiftModel:
         doctor_name=entity.doctor_name,
         date=entity.date,
         type=entity.type,
+        scheduled_assistant_name=entity.scheduled_assistant_name,
+        speciality=entity.speciality,
+        cabinet=entity.cabinet,
         assistant_name=entity.assistant_name,
         manual=entity.manual,
     )

@@ -109,16 +109,36 @@ class AdminSyncService:
 
     async def sync_shifts(self) -> int:
         rows = self.gateway.read_shifts()
-        schedule: list[tuple[str, str, str]] = []
+        schedule: list[tuple[str, str, str, str | None, str | None, str | None]] = []
         for row in rows:
-            if len(row) < 3:
+            if len(row) < 7:
                 continue
-            doctor_name = row[0].strip()
-            date = row[1].strip()
-            shift_type = row[2].strip()
-            if not doctor_name or not date or not shift_type:
+            shift_code = row[1].strip()
+            date = row[2].strip()
+            doctor_name = row[3].strip()
+            assistant_planned = row[4].strip()
+            speciality = row[5].strip()
+            cabinet = row[6].strip()
+            if shift_code == "1":
+                shift_type = "morning"
+            elif shift_code == "2":
+                shift_type = "evening"
+            else:
                 continue
-            schedule.append((doctor_name, date, shift_type))
+            if not doctor_name or not date:
+                continue
+            if assistant_planned == "-----------":
+                assistant_planned = ""
+            schedule.append(
+                (
+                    doctor_name,
+                    date,
+                    shift_type,
+                    assistant_planned or None,
+                    speciality or None,
+                    cabinet or None,
+                )
+            )
         if schedule:
             await self.shifts.bulk_insert(schedule)
         return len(schedule)

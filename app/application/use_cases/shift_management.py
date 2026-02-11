@@ -28,8 +28,39 @@ class ShiftService:
     async def get_current_shift(self, worker_id: int, date: str, shift_type: str):
         return await self.shifts.get_for_assistant(worker_id, date, shift_type)
 
-    async def list_free_shifts(self, date: str, shift_type: str):
-        return await self.shifts.list_free(date, shift_type)
+    async def list_free_shifts(
+        self, date: str, shift_type: str, assistant_name: str | None = None
+    ):
+        shifts = [
+            shift
+            for shift in await self.shifts.list_by_date(date)
+            if shift.type == shift_type and shift.assistant_id is None
+        ]
+        preferred = (assistant_name or "").strip().casefold()
+
+        def is_preferred(item) -> bool:
+            return (
+                item.scheduled_assistant_name
+                and item.scheduled_assistant_name.strip().casefold() == preferred
+            )
+
+        shifts.sort(
+            key=lambda item: (
+                0 if preferred and is_preferred(item) else 1,
+                (item.doctor_name or "").strip().casefold(),
+                item.id or 0,
+            )
+        )
+
+        result: list[tuple[int, str]] = []
+        for shift in shifts:
+            if shift.id is None:
+                continue
+            label = shift.doctor_name
+            if preferred and is_preferred(shift):
+                label = f"⭐ {label}"
+            result.append((shift.id, label))
+        return result
 
     async def add_shift_by_id(self, worker_id: int, worker_name: str, shift_id: int) -> bool:
         return await self.shifts.add_by_id(worker_id, worker_name, shift_id)
