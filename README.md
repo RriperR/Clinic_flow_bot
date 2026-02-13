@@ -79,7 +79,6 @@ Q_tg_bot/
    DB_USER=...
    DB_PASSWORD=...
    TABLE=<google_sheet-table-name>
-   ANSWERS_TABLE=<google_sheet-table-name>
    REPORT_CHAT_ID=<tg-chat-id>
    ADMIN_CHAT_IDS=<optional, comma-separated>
    ```

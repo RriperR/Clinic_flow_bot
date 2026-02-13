@@ -14,7 +14,6 @@ class SheetsGateway:
         self.settings = settings
         self.client = self._build_client(settings.credentials_path)
         self.spreadsheet = self.client.open(settings.main_table) if settings.main_table else None
-        self.answers_spreadsheet = self.client.open(settings.answers_table) if settings.answers_table else None
 
     def _build_client(self, credentials_path: Path) -> gspread.Client:
         scope = [
@@ -82,14 +81,14 @@ class SheetsGateway:
             worksheet.update_cell(target_row, 3, chat_id)
 
     def export_answers(self, headers: list[str], rows: Iterable[list[str]]) -> None:
-        worksheet = self._require_answers_sheet(self.settings.answers_sheet)
+        worksheet = self._require_main_sheet(self.settings.answers_sheet)
         worksheet.clear()
         worksheet.append_row(headers)
         if rows:
             worksheet.append_rows(list(rows), value_input_option="RAW")
 
     def export_shifts(self, headers: list[str], rows: Iterable[list[str]]) -> None:
-        worksheet = self._require_answers_sheet(self.settings.shift_report_sheet)
+        worksheet = self._require_main_sheet(self.settings.shift_report_sheet)
         existing = worksheet.get_all_values()
         if not existing:
             worksheet.append_row(headers)
@@ -102,7 +101,3 @@ class SheetsGateway:
             raise RuntimeError("Main spreadsheet is not configured (TABLE env missing)")
         return self.spreadsheet.worksheet(name)
 
-    def _require_answers_sheet(self, name: str):
-        if not self.answers_spreadsheet:
-            raise RuntimeError("Answers spreadsheet is not configured (ANSWERS_TABLE env missing)")
-        return self.answers_spreadsheet.worksheet(name)

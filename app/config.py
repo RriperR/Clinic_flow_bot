@@ -31,7 +31,6 @@ class SheetsSettings:
     shift_report_sheet: str
     answers_sheet: str
     main_table: str
-    answers_table: str
 
 
 @dataclass
@@ -58,7 +57,6 @@ def load_settings() -> Settings:
         shift_report_sheet=os.getenv("SHIFT_REPORT_SHEET_NAME", "Отчёт по сменам"),
         answers_sheet=os.getenv("ANSWERS_SHEET_NAME", "Ответы"),
         main_table=os.getenv("TABLE", ""),
-        answers_table=os.getenv("ANSWERS_TABLE", ""),
     )
 
     db = DbSettings(
