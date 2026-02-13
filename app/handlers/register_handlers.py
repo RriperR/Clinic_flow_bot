@@ -58,7 +58,7 @@ def create_register_router(registration: RegistrationService) -> Router:
             return
 
         await callback.message.edit_text(
-            "Готово! Теперь отправь фото бейджа, чтобы мы закрепили его за твоим профилем."
+            "Готово! Теперь отправь фото, чтобы мы закрепили его за твоим профилем (не обязательно)"
         )
         await state.set_state(RegistrationState.waiting_photo)
         await callback.answer()
