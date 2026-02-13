@@ -1,4 +1,4 @@
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, or_
 
 from app.domain.entities import AdminUser as AdminUserEntity
 from app.domain.entities import Worker as WorkerEntity
@@ -99,33 +99,53 @@ class SqlAlchemyAdminRepository(AdminRepository):
 
 
 class SqlAlchemyWorkerRepository(WorkerRepository):
-    async def get_by_fullname(self, full_name: str) -> WorkerEntity | None:
+    @staticmethod
+    def _active_clause():
+        return or_(WorkerModel.is_active.is_(True), WorkerModel.is_active.is_(None))
+
+    async def get_by_fullname(
+        self, full_name: str, include_inactive: bool = False
+    ) -> WorkerEntity | None:
         async with async_session() as session:
             stmt = select(WorkerModel).where(WorkerModel.full_name == full_name)
+            if not include_inactive:
+                stmt = stmt.where(self._active_clause())
             result = await session.execute(stmt)
             return to_worker_entity(result.scalar_one_or_none())
 
-    async def get_by_chat_id(self, chat_id: int) -> WorkerEntity | None:
+    async def get_by_chat_id(
+        self, chat_id: int, include_inactive: bool = False
+    ) -> WorkerEntity | None:
         async with async_session() as session:
             stmt = select(WorkerModel).where(WorkerModel.chat_id == str(chat_id))
+            if not include_inactive:
+                stmt = stmt.where(self._active_clause())
             result = await session.execute(stmt)
             return to_worker_entity(result.scalar_one_or_none())
 
-    async def get_by_id(self, worker_id: int) -> WorkerEntity | None:
+    async def get_by_id(
+        self, worker_id: int, include_inactive: bool = False
+    ) -> WorkerEntity | None:
         async with async_session() as session:
             stmt = select(WorkerModel).where(WorkerModel.id == worker_id)
+            if not include_inactive:
+                stmt = stmt.where(self._active_clause())
             result = await session.execute(stmt)
             return to_worker_entity(result.scalar_one_or_none())
 
-    async def list_all(self):
+    async def list_all(self, include_inactive: bool = False):
         async with async_session() as session:
-            result = await session.execute(select(WorkerModel))
+            stmt = select(WorkerModel)
+            if not include_inactive:
+                stmt = stmt.where(self._active_clause())
+            result = await session.execute(stmt)
             return [to_worker_entity(item) for item in result.scalars().all()]
 
     async def list_unregistered(self):
         async with async_session() as session:
             stmt = select(WorkerModel).where(
-                (WorkerModel.chat_id.is_(None)) | (WorkerModel.chat_id == "")
+                ((WorkerModel.chat_id.is_(None)) | (WorkerModel.chat_id == "")),
+                self._active_clause(),
             )
             result = await session.execute(stmt)
             return [to_worker_entity(item) for item in result.scalars().all()]
@@ -157,6 +177,15 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
             if worker:
                 worker.file_id = file_id
                 await session.commit()
+
+    async def set_active(self, worker_id: int, is_active: bool) -> bool:
+        async with async_session() as session:
+            worker = await session.get(WorkerModel, worker_id)
+            if not worker:
+                return False
+            worker.is_active = is_active
+            await session.commit()
+            return True
 
 
 class SqlAlchemySurveyRepository(SurveyRepository):

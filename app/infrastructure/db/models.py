@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import BigInteger, String, Text, Column, Boolean, select
+from sqlalchemy import BigInteger, String, Text, Column, Boolean, select, text
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -41,6 +41,7 @@ class Worker(Base):
     chat_id = Column(String(31))
     speciality = Column(String(255))
     phone = Column(String(31))
+    is_active = Column(Boolean, default=True)
 
 
 class Pair(Base):

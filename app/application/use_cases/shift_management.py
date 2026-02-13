@@ -16,8 +16,10 @@ class ShiftService:
         self.workers = workers
         self.shifts = shifts
 
-    async def get_worker(self, chat_id: int):
-        return await self.workers.get_by_chat_id(chat_id)
+    async def get_worker(self, chat_id: int, include_inactive: bool = False):
+        return await self.workers.get_by_chat_id(
+            chat_id, include_inactive=include_inactive
+        )
 
     async def get_worker_by_id(self, worker_id: int):
         return await self.workers.get_by_id(worker_id)
