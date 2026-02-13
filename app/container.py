@@ -41,7 +41,7 @@ class Container:
         self.sheets_gateway = SheetsGateway(self.settings.sheets)
 
         # Application layer
-        self.registration = RegistrationService(self.worker_repo)
+        self.registration = RegistrationService(self.worker_repo, self.sheets_gateway)
         self.survey_flow = SurveyFlowService(
             self.worker_repo,
             self.pair_repo,

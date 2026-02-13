@@ -83,9 +83,17 @@ def create_register_router(registration: RegistrationService) -> Router:
         worker = await registration.get_by_chat_id(message.from_user.id)
 
         if not worker:
-            await message.answer(
-                "Похоже, ты ещё не выбрал(а) себя. Вернись к /start и зарегистрируйся."
+            inactive = await registration.get_by_chat_id(
+                message.from_user.id, include_inactive=True
             )
+            if inactive and not inactive.is_active:
+                await message.answer(
+                    "Ваш аккаунт деактивирован. Обратитесь к администратору."
+                )
+            else:
+                await message.answer(
+                    "Похоже, ты ещё не выбрал(а) себя. Вернись к /start и зарегистрируйся."
+                )
             await state.clear()
             return
 

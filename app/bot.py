@@ -42,6 +42,7 @@ async def main():
 
     scheduler = AsyncIOScheduler()
     # scheduler.add_job(container.admin_sync.sync_pairs, "cron", hour=19, minute=50)
+    scheduler.add_job(container.admin_sync.sync_workers, "cron", hour=5, minute=55)
     scheduler.add_job(container.admin_sync.sync_shifts, "cron", hour=6, minute=0)
     # scheduler.add_job(container.scheduler.send_surveys, "cron", hour=20, minute=0, args=[bot, dp])
     # scheduler.add_job(container.admin_sync.export_answers, "cron", day_of_week="sun", hour=23, minute=0)

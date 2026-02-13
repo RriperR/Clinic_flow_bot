@@ -20,6 +20,12 @@ logger = setup_logger("shift", "shift.log")
 def create_shift_router(shift_service: ShiftService) -> Router:
     router = Router()
 
+    async def resolve_worker_message(chat_id: int) -> str | None:
+        inactive = await shift_service.get_worker(chat_id, include_inactive=True)
+        if inactive and not inactive.is_active:
+            return "Ваш аккаунт деактивирован. Обратитесь к администратору."
+        return None
+
     @router.message(Command("shift"))
     async def show_doctors(message: Message):
         now = datetime.now()
@@ -31,7 +37,11 @@ def create_shift_router(shift_service: ShiftService) -> Router:
         date_str = now.strftime("%d.%m.%Y")
         worker = await shift_service.get_worker(message.from_user.id)
         if not worker:
-            await message.answer("Мы не нашли вас в базе, сначала зарегистрируйтесь")
+            inactive_msg = await resolve_worker_message(message.from_user.id)
+            await message.answer(
+                inactive_msg
+                or "Мы не нашли вас в базе, сначала зарегистрируйтесь"
+            )
             return
 
         current_shift = await shift_service.get_current_shift(worker.id, date_str, shift_type)
@@ -69,7 +79,11 @@ def create_shift_router(shift_service: ShiftService) -> Router:
 
         worker = await shift_service.get_worker(callback.from_user.id)
         if not worker:
-            await callback.answer("Мы не нашли вас в базе", show_alert=True)
+            inactive_msg = await resolve_worker_message(callback.from_user.id)
+            await callback.answer(
+                inactive_msg or "Мы не нашли вас в базе",
+                show_alert=True,
+            )
             return
 
         date_str = now.strftime("%d.%m.%Y")
@@ -117,7 +131,11 @@ def create_shift_router(shift_service: ShiftService) -> Router:
 
         worker = await shift_service.get_worker(callback.from_user.id)
         if not worker:
-            await callback.answer("Мы не нашли вас в базе", show_alert=True)
+            inactive_msg = await resolve_worker_message(callback.from_user.id)
+            await callback.answer(
+                inactive_msg or "Мы не нашли вас в базе",
+                show_alert=True,
+            )
             return
 
         date_str = now.strftime("%d.%m.%Y")
@@ -154,7 +172,11 @@ def create_shift_router(shift_service: ShiftService) -> Router:
 
         worker = await shift_service.get_worker(cb.from_user.id)
         if not worker:
-            await cb.answer("Мы не нашли вас в базе", show_alert=True)
+            inactive_msg = await resolve_worker_message(cb.from_user.id)
+            await cb.answer(
+                inactive_msg or "Мы не нашли вас в базе",
+                show_alert=True,
+            )
             return
 
         doctor = await shift_service.get_worker_by_id(callback_data.doctor_id)

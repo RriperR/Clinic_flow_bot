@@ -9,6 +9,7 @@ class Worker:
     chat_id: str | None = None
     speciality: str | None = None
     phone: str | None = None
+    is_active: bool = True
 
 
 @dataclass

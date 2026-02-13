@@ -50,6 +50,7 @@ def to_worker_entity(model: WorkerModel | None) -> WorkerEntity | None:
         chat_id=model.chat_id,
         speciality=model.speciality,
         phone=model.phone,
+        is_active=model.is_active if model.is_active is not None else True,
     )
 
 
@@ -61,6 +62,7 @@ def from_worker_entity(entity: WorkerEntity) -> WorkerModel:
         chat_id=entity.chat_id,
         speciality=entity.speciality,
         phone=entity.phone,
+        is_active=entity.is_active,
     )
 
 

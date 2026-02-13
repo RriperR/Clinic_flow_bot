@@ -29,21 +29,33 @@ class AdminSyncService:
         self.shifts = shifts
 
     async def sync_workers(self) -> int:
-        existing = {w.full_name: w for w in await self.workers.list_all()}
+        def normalize(value: str) -> str:
+            return value.strip().casefold()
+
+        existing = {
+            normalize(w.full_name): w
+            for w in await self.workers.list_all(include_inactive=True)
+            if w.full_name
+        }
         rows = self.gateway.read_workers()
         created = 0
+        seen: set[str] = set()
 
         for row in rows:
             full_name = row[0].strip() if len(row) > 0 else ""
             if not full_name:
                 continue
+            key = normalize(full_name)
+            seen.add(key)
             file_id = row[1].strip() if len(row) > 1 else ""
             chat_id = row[2].strip() if len(row) > 2 else ""
             speciality = row[3].strip() if len(row) > 3 else ""
             phone = row[4].strip() if len(row) > 4 else ""
 
-            worker = existing.get(full_name)
+            worker = existing.get(key)
             if worker:
+                if not worker.is_active and worker.id is not None:
+                    await self.workers.set_active(worker.id, True)
                 if chat_id and not worker.chat_id:
                     await self.workers.set_chat_id(worker.id, chat_id)
                 if file_id and not worker.file_id:
@@ -51,6 +63,7 @@ class AdminSyncService:
                 continue
 
             new_worker = Worker(
+                id=None,
                 full_name=full_name,
                 file_id=file_id,
                 chat_id=chat_id,
@@ -59,6 +72,12 @@ class AdminSyncService:
             )
             await self.workers.add(new_worker)
             created += 1
+
+        for key, worker in existing.items():
+            if key in seen:
+                continue
+            if worker.is_active and worker.id is not None:
+                await self.workers.set_active(worker.id, False)
 
         return created
 
