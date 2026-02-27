@@ -234,13 +234,24 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             await cb.answer(DOCTOR_NOT_FOUND_MSG, show_alert=True)
             return
 
-        success = await shift_service.add_manual_shift(
-            worker.id,
-            worker.full_name,
-            doctor.full_name,
-            shift_type,
-            date_str,
+        doctor_shifts = await shift_service.list_doctor_shifts(
+            date_str, shift_type, doctor.full_name
         )
+        free_slot = next((shift for shift in doctor_shifts if shift.assistant_id is None), None)
+        if free_slot and free_slot.id is not None:
+            success = await shift_service.add_shift_by_id(
+                worker.id,
+                worker.full_name,
+                free_slot.id,
+            )
+        else:
+            success = await shift_service.add_manual_shift(
+                worker.id,
+                worker.full_name,
+                doctor.full_name,
+                shift_type,
+                date_str,
+            )
 
         if success:
             await cb.message.edit_text(
