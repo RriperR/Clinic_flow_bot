@@ -9,6 +9,7 @@ from app.application.use_cases.admin_access import AdminAccessService
 from app.application.use_cases.instrument_admin import InstrumentAdminService
 from app.domain.entities import Cabinet, Instrument, Worker
 from app.logger import setup_logger
+from app.text_utils import normalize_text
 
 
 logger = setup_logger("admin_panel", "admin_panel.log")
@@ -302,7 +303,7 @@ def create_admin_panel_router(
         admin_ids = {admin.chat_id for admin in await admin_access.list_admins()}
         admin_ids.update(admin_access.list_super_admins())
         available = [worker for worker in workers if worker.chat_id not in admin_ids]
-        available.sort(key=lambda w: (w.full_name or "").strip().casefold())
+        available.sort(key=lambda w: normalize_text(w.full_name))
         if not available:
             await callback.message.edit_text(
                 "ℹ️ Нет доступных сотрудников для добавления.",

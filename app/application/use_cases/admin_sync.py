@@ -9,6 +9,7 @@ from app.domain.repositories import (
     ShiftRepository,
 )
 from app.infrastructure.sheets.gateway import SheetsGateway
+from app.text_utils import normalize_text
 
 
 class AdminSyncService:
@@ -29,11 +30,8 @@ class AdminSyncService:
         self.shifts = shifts
 
     async def sync_workers(self) -> int:
-        def normalize(value: str) -> str:
-            return value.strip().casefold()
-
         existing = {
-            normalize(w.full_name): w
+            normalize_text(w.full_name): w
             for w in await self.workers.list_all(include_inactive=True)
             if w.full_name
         }
@@ -45,7 +43,7 @@ class AdminSyncService:
             full_name = row[0].strip() if len(row) > 0 else ""
             if not full_name:
                 continue
-            key = normalize(full_name)
+            key = normalize_text(full_name)
             seen.add(key)
             file_id = row[1].strip() if len(row) > 1 else ""
             chat_id = row[2].strip() if len(row) > 2 else ""

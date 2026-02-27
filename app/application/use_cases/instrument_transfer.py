@@ -6,6 +6,7 @@ from app.domain.repositories import (
     InstrumentRepository,
     InstrumentMoveRepository,
 )
+from app.text_utils import normalize_text
 
 
 class InstrumentTransferService:
@@ -32,8 +33,8 @@ class InstrumentTransferService:
         for cabinet in cabinets:
             if (
                 cabinet.name
-                and cabinet.name.strip().casefold()
-                == self.STERILIZATION_CABINET_NAME.casefold()
+                and normalize_text(cabinet.name)
+                == normalize_text(self.STERILIZATION_CABINET_NAME)
             ):
                 return cabinet
         return None

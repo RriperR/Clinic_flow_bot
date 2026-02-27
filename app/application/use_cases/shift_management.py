@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from app.domain.repositories import WorkerRepository, ShiftRepository
+from app.text_utils import normalize_text
 
 
 def detect_shift_type(hour: int) -> str | None:
@@ -28,12 +29,12 @@ class ShiftService:
         return await self.workers.list_all()
 
     async def list_doctor_shifts(self, date: str, shift_type: str, doctor_name: str):
-        normalized = doctor_name.strip().casefold()
+        normalized = normalize_text(doctor_name)
         shifts = [
             shift
             for shift in await self.shifts.list_by_date(date)
             if shift.type == shift_type
-            and (shift.doctor_name or "").strip().casefold() == normalized
+            and normalize_text(shift.doctor_name) == normalized
         ]
         shifts.sort(key=lambda item: item.id or 0)
         return shifts
@@ -49,18 +50,18 @@ class ShiftService:
             for shift in await self.shifts.list_by_date(date)
             if shift.type == shift_type and shift.assistant_id is None
         ]
-        preferred = (assistant_name or "").strip().casefold()
+        preferred = normalize_text(assistant_name)
 
         def is_preferred(item) -> bool:
             return (
                 item.scheduled_assistant_name
-                and item.scheduled_assistant_name.strip().casefold() == preferred
+                and normalize_text(item.scheduled_assistant_name) == preferred
             )
 
         shifts.sort(
             key=lambda item: (
                 0 if preferred and is_preferred(item) else 1,
-                (item.doctor_name or "").strip().casefold(),
+                normalize_text(item.doctor_name),
                 item.id or 0,
             )
         )

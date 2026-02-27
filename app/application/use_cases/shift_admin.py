@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from app.domain.repositories import WorkerRepository, ShiftRepository
+from app.text_utils import normalize_text
 
 
 class ShiftAdminService:
@@ -19,7 +20,7 @@ class ShiftAdminService:
         shifts.sort(
             key=lambda s: (
                 order.get(s.type, 2),
-                (s.doctor_name or "").strip().casefold(),
+                normalize_text(s.doctor_name),
                 s.id or 0,
             )
         )
