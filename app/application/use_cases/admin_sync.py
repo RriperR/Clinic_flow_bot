@@ -56,6 +56,8 @@ class AdminSyncService:
                     await self.workers.set_active(worker.id, True)
                 if chat_id and not worker.chat_id:
                     await self.workers.set_chat_id(worker.id, chat_id)
+                if not chat_id and worker.chat_id:
+                    await self.workers.clear_chat_id(worker.id)
                 if file_id and not worker.file_id:
                     await self.workers.set_file_id(worker.id, file_id)
                 continue

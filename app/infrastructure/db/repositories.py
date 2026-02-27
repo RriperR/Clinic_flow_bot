@@ -171,6 +171,15 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
             await session.commit()
             return True
 
+    async def clear_chat_id(self, worker_id: int) -> bool:
+        async with async_session() as session:
+            worker = await session.get(WorkerModel, worker_id)
+            if not worker:
+                return False
+            worker.chat_id = None
+            await session.commit()
+            return True
+
     async def set_file_id(self, worker_id: int, file_id: str) -> None:
         async with async_session() as session:
             worker = await session.get(WorkerModel, worker_id)
