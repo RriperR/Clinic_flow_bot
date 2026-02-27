@@ -17,7 +17,7 @@ from app.keyboards import (
 from app.logger import setup_logger
 
 logger = setup_logger("shift", "shift.log")
-SHIFT_TIME_MSG = "Записываться на смену можно с 08:00 до 20:00"
+SHIFT_TIME_MSG = "Записываться на смену можно с 07:30 до 20:30"
 WORKER_NOT_FOUND_MSG = "Мы не нашли вас в базе"
 WORKER_NOT_FOUND_START_MSG = "Мы не нашли вас в базе, сначала зарегистрируйтесь"
 DOCTOR_NOT_FOUND_MSG = "Доктор не найден"

@@ -4,10 +4,11 @@ from app.domain.repositories import WorkerRepository, ShiftRepository
 from app.text_utils import normalize_text
 
 
-def detect_shift_type(hour: int) -> str | None:
-    if 8 <= hour < 14:
+def detect_shift_type(hour: int, minute: int = 0) -> str | None:
+    current_minutes = hour * 60 + minute
+    if 7 * 60 + 30 <= current_minutes < 14 * 60:
         return "morning"
-    if 14 <= hour < 20:
+    if 14 * 60 <= current_minutes < 20 * 60 + 30:
         return "evening"
     return None
 
@@ -99,6 +100,6 @@ class ShiftService:
 
     def guess_shift_type_from_now(self) -> tuple[str | None, str]:
         now = datetime.now()
-        shift_type = detect_shift_type(now.hour)
+        shift_type = detect_shift_type(now.hour, now.minute)
         date_str = now.strftime("%d.%m.%Y")
         return shift_type, date_str
