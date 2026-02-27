@@ -17,6 +17,10 @@ class DoctorsPage(CallbackData, prefix="dpg"):
     page: int
 
 
+class ManualShiftConfirm(CallbackData, prefix="msc"):
+    doctor_id: int
+
+
 async def build_worker_keyboard(registration: RegistrationService) -> InlineKeyboardMarkup:
     workers = await registration.list_unregistered()
 
@@ -151,3 +155,20 @@ def build_cancel_shift_keyboard(shift_type: str) -> InlineKeyboardMarkup:
     )
     builder.adjust(1)
     return builder.as_markup()
+
+
+def build_manual_shift_confirm_keyboard(doctor_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Да",
+                    callback_data=ManualShiftConfirm(doctor_id=doctor_id).pack(),
+                ),
+                InlineKeyboardButton(
+                    text="Нет",
+                    callback_data="manual_shift_cancel",
+                ),
+            ]
+        ]
+    )

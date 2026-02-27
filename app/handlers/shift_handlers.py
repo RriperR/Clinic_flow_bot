@@ -9,7 +9,9 @@ from app.keyboards import (
     build_shift_keyboard,
     build_all_doctors_keyboard,
     build_cancel_shift_keyboard,
+    build_manual_shift_confirm_keyboard,
     DoctorsPage,
+    ManualShiftConfirm,
     SelectDoctor,
 )
 from app.logger import setup_logger
@@ -184,6 +186,65 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             await cb.answer("Доктор не найден", show_alert=True)
             return
 
+        doctor_shifts = await shift_service.list_doctor_shifts(
+            date_str, shift_type, doctor.full_name
+        )
+        if not doctor_shifts:
+            await cb.message.edit_text(
+                "Этого врача сейчас нет в графике работы. Вы уверены что хотите создать с ним смену?",
+                reply_markup=build_manual_shift_confirm_keyboard(doctor.id),
+            )
+            await cb.answer()
+            return
+
+        free_slot = next((shift for shift in doctor_shifts if shift.assistant_id is None), None)
+        if free_slot and free_slot.id is not None:
+            success = await shift_service.add_shift_by_id(
+                worker.id,
+                worker.full_name,
+                free_slot.id,
+            )
+            if success:
+                readable = "Утренняя" if shift_type == "morning" else "Вечерняя"
+                await cb.message.edit_text(
+                    f"Готово ✔ {readable} смена у {doctor.full_name} закреплена за вами"
+                )
+            else:
+                await cb.message.edit_text(
+                    "Не удалось записаться на смену. Скорее всего, её уже заняли."
+                )
+            await cb.answer()
+            return
+
+        await cb.message.edit_text(
+            "‼️‼️ Внимание! ‼️‼️\n"
+            "У этого врача уже есть смена с другим ассистентом, вы уверены что хотите создать с ним дополнительную смену?",
+            reply_markup=build_manual_shift_confirm_keyboard(doctor.id),
+        )
+        await cb.answer()
+        return
+
+    @router.callback_query(ManualShiftConfirm.filter())
+    async def confirm_manual_shift(cb: CallbackQuery, callback_data: ManualShiftConfirm):
+        shift_type, date_str = shift_service.guess_shift_type_from_now()
+        if not shift_type:
+            await cb.answer("Записываться на смену можно с 08:00 до 20:00", show_alert=True)
+            return
+
+        worker = await shift_service.get_worker(cb.from_user.id)
+        if not worker:
+            inactive_msg = await resolve_worker_message(cb.from_user.id)
+            await cb.answer(
+                inactive_msg or "Мы не нашли вас в базе",
+                show_alert=True,
+            )
+            return
+
+        doctor = await shift_service.get_worker_by_id(callback_data.doctor_id)
+        if not doctor:
+            await cb.answer("Доктор не найден", show_alert=True)
+            return
+
         success = await shift_service.add_manual_shift(
             worker.id,
             worker.full_name,
@@ -199,6 +260,11 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             )
         else:
             await cb.message.edit_text("Не удалось записаться на смену")
+        await cb.answer()
+
+    @router.callback_query(F.data == "manual_shift_cancel")
+    async def cancel_manual_shift(cb: CallbackQuery):
+        await cb.message.edit_text("Выбор отменён.")
         await cb.answer()
 
     return router

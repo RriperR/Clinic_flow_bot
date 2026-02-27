@@ -27,6 +27,17 @@ class ShiftService:
     async def list_all_doctors(self):
         return await self.workers.list_all()
 
+    async def list_doctor_shifts(self, date: str, shift_type: str, doctor_name: str):
+        normalized = doctor_name.strip().casefold()
+        shifts = [
+            shift
+            for shift in await self.shifts.list_by_date(date)
+            if shift.type == shift_type
+            and (shift.doctor_name or "").strip().casefold() == normalized
+        ]
+        shifts.sort(key=lambda item: item.id or 0)
+        return shifts
+
     async def get_current_shift(self, worker_id: int, date: str, shift_type: str):
         return await self.shifts.get_for_assistant(worker_id, date, shift_type)
 
