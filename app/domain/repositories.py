@@ -38,6 +38,24 @@ class WorkerRepository(Protocol):
     async def clear_chat_id(self, worker_id: int) -> bool: ...
     async def set_file_id(self, worker_id: int, file_id: str) -> None: ...
     async def set_active(self, worker_id: int, is_active: bool) -> bool: ...
+    async def update_from_sync(
+        self,
+        worker_id: int,
+        *,
+        file_id: str | None,
+        chat_id: str | None,
+        speciality: str | None,
+        phone: str | None,
+        shifts_week: int,
+        shifts_month: int,
+        given_week: int,
+        given_month: int,
+        replacement_week: int,
+        replacement_month: int,
+        manual_week: int,
+        manual_month: int,
+        is_active: bool = True,
+    ) -> bool: ...
 
 
 class SurveyRepository(Protocol):

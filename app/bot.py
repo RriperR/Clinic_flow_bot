@@ -1,6 +1,7 @@
 ﻿import asyncio
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
@@ -27,6 +28,15 @@ async def main():
 
     bot = Bot(token=settings.bot.token)
     dp = Dispatcher()
+    await bot.set_my_commands(
+        [
+            BotCommand(command="start", description="зарегистрироваться"),
+            BotCommand(command="shift", description="выбрать смену"),
+            BotCommand(command="report", description="посмотреть отчёт"),
+            BotCommand(command="move_instrument", description="перенести инструмент"),
+            BotCommand(command="moves", description="история перемещений"),
+        ]
+    )
 
     await async_main()
 

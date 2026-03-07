@@ -196,6 +196,48 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
             await session.commit()
             return True
 
+    async def update_from_sync(
+        self,
+        worker_id: int,
+        *,
+        file_id: str | None,
+        chat_id: str | None,
+        speciality: str | None,
+        phone: str | None,
+        shifts_week: int,
+        shifts_month: int,
+        given_week: int,
+        given_month: int,
+        replacement_week: int,
+        replacement_month: int,
+        manual_week: int,
+        manual_month: int,
+        is_active: bool = True,
+    ) -> bool:
+        async with async_session() as session:
+            stmt = (
+                update(WorkerModel)
+                .where(WorkerModel.id == worker_id)
+                .values(
+                    file_id=file_id or None,
+                    chat_id=chat_id or None,
+                    speciality=speciality or None,
+                    phone=phone or None,
+                    shifts_week=shifts_week,
+                    shifts_month=shifts_month,
+                    given_week=given_week,
+                    given_month=given_month,
+                    replacement_week=replacement_week,
+                    replacement_month=replacement_month,
+                    manual_week=manual_week,
+                    manual_month=manual_month,
+                    is_active=is_active,
+                )
+            )
+            result = await session.execute(stmt)
+            await session.commit()
+            return result.rowcount > 0
+
 
 class SqlAlchemySurveyRepository(SurveyRepository):
     async def get_by_name(self, name: str) -> SurveyEntity | None:

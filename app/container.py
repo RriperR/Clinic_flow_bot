@@ -74,7 +74,7 @@ class Container:
             self.answer_repo,
             self.shift_repo,
         )
-        self.worker_report = WorkerReportService(self.worker_repo, self.sheets_gateway)
+        self.worker_report = WorkerReportService(self.worker_repo)
         self.reports = ReportsService(
             self.worker_repo,
             self.survey_repo,
