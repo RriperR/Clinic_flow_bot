@@ -5,6 +5,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 
 from app.application.use_cases.shift_management import ShiftService
+from app.application.use_cases.worker_report import WorkerReportService
 from app.keyboards import (
     build_shift_keyboard,
     build_all_doctors_keyboard,
@@ -23,7 +24,10 @@ WORKER_NOT_FOUND_START_MSG = "Мы не нашли вас в базе, снач�
 DOCTOR_NOT_FOUND_MSG = "Доктор не найден"
 
 
-def create_shift_router(shift_service: ShiftService) -> Router:
+def create_shift_router(
+    shift_service: ShiftService,
+    report_service: WorkerReportService | None = None,
+) -> Router:
     router = Router()
 
     def readable_shift(shift_type: str) -> str:
@@ -53,6 +57,18 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             show_alert=True,
         )
         return None
+
+    async def build_report_suffix(worker) -> str:
+        if not report_service:
+            return ""
+        try:
+            report_text = report_service.build_report_for_worker(worker)
+        except Exception:
+            logger.exception("Failed to build shift report for worker=%s", worker.id)
+            return ""
+        if not report_text:
+            return ""
+        return f"\n\n{report_text}"
 
     @router.message(Command("shift"))
     async def show_doctors(message: Message):
@@ -110,8 +126,10 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             shift_id,
         )
         if success:
+            report_suffix = await build_report_suffix(worker)
             await callback.message.edit_text(
                 f"Готово ✔ {readable_shift(shift_type)} смена у {shift.doctor_name} закреплена за вами"
+                f"{report_suffix}"
             )
         else:
             await callback.message.edit_text(
@@ -205,8 +223,10 @@ def create_shift_router(shift_service: ShiftService) -> Router:
                 free_slot.id,
             )
             if success:
+                report_suffix = await build_report_suffix(worker)
                 await cb.message.edit_text(
                     f"Готово ✔ {readable_shift(shift_type)} смена у {doctor.full_name} закреплена за вами"
+                    f"{report_suffix}"
                 )
             else:
                 await cb.message.edit_text(
@@ -261,8 +281,10 @@ def create_shift_router(shift_service: ShiftService) -> Router:
             )
 
         if success:
+            report_suffix = await build_report_suffix(worker)
             await cb.message.edit_text(
                 f"Готово ✔ {readable_shift(shift_type)} смена у {doctor.full_name} закреплена за вами"
+                f"{report_suffix}"
             )
         else:
             await cb.message.edit_text("Не удалось записаться на смену")
