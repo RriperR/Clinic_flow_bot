@@ -15,15 +15,16 @@ class WorkerReportService:
     @staticmethod
     def build_report_for_worker(worker: Worker) -> str:
         return (
-            "Отчёт без учёта сегодняшних смен:\n"
-            "За неделю:\n"
-            f"смен: {worker.shifts_week}\n"
-            f"отдано: {worker.given_week}\n"
-            f"выходов на замену: {worker.replacement_week}\n"
-            f"смен выбрано вручную: {worker.manual_week}\n\n"
-            "За месяц:\n"
-            f"всего смен: {worker.shifts_month}\n"
-            f"отдано смен: {worker.given_month}\n"
-            f"выходов на замену: {worker.replacement_month}\n"
-            f"смен выбрано вручную: {worker.manual_month}"
+            "📊 Отчёт по сменам\n"
+            "(без учёта сегодняшних смен)\n\n"
+            "🗓 За неделю:\n"
+            f"• Всего смен: {worker.shifts_week}\n"
+            f"• Отдано смен: {worker.given_week}\n"
+            f"• Выходов на замену: {worker.replacement_week}\n"
+            f"• Смен выбрано вручную: {worker.manual_week}\n\n"
+            "📅 За месяц:\n"
+            f"• Всего смен: {worker.shifts_month}\n"
+            f"• Отдано смен: {worker.given_month}\n"
+            f"• Выходов на замену: {worker.replacement_month}\n"
+            f"• Смен выбрано вручную: {worker.manual_month}"
         )
