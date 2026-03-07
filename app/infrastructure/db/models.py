@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import BigInteger, String, Text, Column, Boolean, select, text
+from sqlalchemy import BigInteger, String, Text, Column, Boolean, Integer, select
 from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -42,6 +42,14 @@ class Worker(Base):
     speciality = Column(String(255))
     phone = Column(String(31))
     is_active = Column(Boolean, default=True)
+    shifts_week = Column(Integer, default=0, nullable=False)
+    shifts_month = Column(Integer, default=0, nullable=False)
+    given_week = Column(Integer, default=0, nullable=False)
+    given_month = Column(Integer, default=0, nullable=False)
+    replacement_week = Column(Integer, default=0, nullable=False)
+    replacement_month = Column(Integer, default=0, nullable=False)
+    manual_week = Column(Integer, default=0, nullable=False)
+    manual_month = Column(Integer, default=0, nullable=False)
 
 
 class Pair(Base):

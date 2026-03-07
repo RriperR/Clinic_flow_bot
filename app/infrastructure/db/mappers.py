@@ -51,6 +51,14 @@ def to_worker_entity(model: WorkerModel | None) -> WorkerEntity | None:
         speciality=model.speciality,
         phone=model.phone,
         is_active=model.is_active if model.is_active is not None else True,
+        shifts_week=model.shifts_week or 0,
+        shifts_month=model.shifts_month or 0,
+        given_week=model.given_week or 0,
+        given_month=model.given_month or 0,
+        replacement_week=model.replacement_week or 0,
+        replacement_month=model.replacement_month or 0,
+        manual_week=model.manual_week or 0,
+        manual_month=model.manual_month or 0,
     )
 
 
@@ -63,6 +71,14 @@ def from_worker_entity(entity: WorkerEntity) -> WorkerModel:
         speciality=entity.speciality,
         phone=entity.phone,
         is_active=entity.is_active,
+        shifts_week=entity.shifts_week,
+        shifts_month=entity.shifts_month,
+        given_week=entity.given_week,
+        given_month=entity.given_month,
+        replacement_week=entity.replacement_week,
+        replacement_month=entity.replacement_month,
+        manual_week=entity.manual_week,
+        manual_month=entity.manual_month,
     )
 
 

@@ -1,5 +1,7 @@
 ﻿from datetime import datetime
 
+import re
+
 from app.domain.entities import Worker, Pair, Survey
 from app.domain.repositories import (
     WorkerRepository,
@@ -30,6 +32,17 @@ class AdminSyncService:
         self.shifts = shifts
 
     async def sync_workers(self) -> int:
+        def read_metric(row: list[str], index: int) -> int:
+            if index >= len(row):
+                return 0
+            raw = row[index].strip().replace(" ", "")
+            if not raw:
+                return 0
+            if raw.isdigit():
+                return int(raw)
+            match = re.search(r"\d+", raw)
+            return int(match.group(0)) if match else 0
+
         existing = {
             normalize_text(w.full_name): w
             for w in await self.workers.list_all(include_inactive=True)
@@ -49,17 +62,35 @@ class AdminSyncService:
             chat_id = row[2].strip() if len(row) > 2 else ""
             speciality = row[3].strip() if len(row) > 3 else ""
             phone = row[4].strip() if len(row) > 4 else ""
+            shifts_week = read_metric(row, 5)
+            shifts_month = read_metric(row, 6)
+            given_week = read_metric(row, 7)
+            given_month = read_metric(row, 8)
+            replacement_week = read_metric(row, 9)
+            replacement_month = read_metric(row, 10)
+            manual_week = read_metric(row, 11)
+            manual_month = read_metric(row, 12)
 
             worker = existing.get(key)
             if worker:
-                if not worker.is_active and worker.id is not None:
-                    await self.workers.set_active(worker.id, True)
-                if chat_id and not worker.chat_id:
-                    await self.workers.set_chat_id(worker.id, chat_id)
-                if not chat_id and worker.chat_id:
-                    await self.workers.clear_chat_id(worker.id)
-                if file_id and not worker.file_id:
-                    await self.workers.set_file_id(worker.id, file_id)
+                if worker.id is None:
+                    continue
+                await self.workers.update_from_sync(
+                    worker.id,
+                    file_id=file_id or None,
+                    chat_id=chat_id or None,
+                    speciality=speciality or None,
+                    phone=phone or None,
+                    shifts_week=shifts_week,
+                    shifts_month=shifts_month,
+                    given_week=given_week,
+                    given_month=given_month,
+                    replacement_week=replacement_week,
+                    replacement_month=replacement_month,
+                    manual_week=manual_week,
+                    manual_month=manual_month,
+                    is_active=True,
+                )
                 continue
 
             new_worker = Worker(
@@ -69,6 +100,14 @@ class AdminSyncService:
                 chat_id=chat_id,
                 speciality=speciality,
                 phone=phone,
+                shifts_week=shifts_week,
+                shifts_month=shifts_month,
+                given_week=given_week,
+                given_month=given_month,
+                replacement_week=replacement_week,
+                replacement_month=replacement_month,
+                manual_week=manual_week,
+                manual_month=manual_month,
             )
             await self.workers.add(new_worker)
             created += 1

@@ -1,6 +1,7 @@
 ﻿import asyncio
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
@@ -14,6 +15,7 @@ from app.handlers.shift_admin_handlers import create_shift_admin_router
 from app.handlers.moves_handlers import create_moves_router
 from app.handlers.instrument_transfer_handlers import create_instrument_transfer_router
 from app.handlers.admin_panel_handlers import create_admin_panel_router
+from app.handlers.report_handlers import create_report_router
 from app.logger import setup_logger
 
 
@@ -26,13 +28,23 @@ async def main():
 
     bot = Bot(token=settings.bot.token)
     dp = Dispatcher()
+    await bot.set_my_commands(
+        [
+            BotCommand(command="start", description="зарегистрироваться"),
+            BotCommand(command="shift", description="выбрать смену"),
+            BotCommand(command="report", description="посмотреть отчёт"),
+            BotCommand(command="move_instrument", description="перенести инструмент"),
+            BotCommand(command="moves", description="история перемещений"),
+        ]
+    )
 
     await async_main()
 
     dp.include_router(create_admin_router(container.admin_sync))
     dp.include_router(create_register_router(container.registration))
     dp.include_router(create_survey_router(container.survey_flow))
-    dp.include_router(create_shift_router(container.shift_service))
+    dp.include_router(create_shift_router(container.shift_service, container.worker_report))
+    dp.include_router(create_report_router(container.worker_report))
     dp.include_router(create_shift_admin_router(container.shift_admin, container.admin_access))
     dp.include_router(create_moves_router(container.instrument_admin))
     dp.include_router(create_instrument_transfer_router(container.instrument_transfer))

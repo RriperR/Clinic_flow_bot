@@ -21,6 +21,7 @@ from app.application.use_cases.instrument_admin import InstrumentAdminService
 from app.application.use_cases.admin_sync import AdminSyncService
 from app.application.use_cases.reports import ReportsService
 from app.application.use_cases.scheduler import SurveyScheduler
+from app.application.use_cases.worker_report import WorkerReportService
 
 
 class Container:
@@ -73,6 +74,7 @@ class Container:
             self.answer_repo,
             self.shift_repo,
         )
+        self.worker_report = WorkerReportService(self.worker_repo)
         self.reports = ReportsService(
             self.worker_repo,
             self.survey_repo,
