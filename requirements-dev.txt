@@ -1,0 +1,7 @@
+-r requirements.txt
+uv
+pytest
+pytest-asyncio
+pre-commit
+ruff
+mypy
