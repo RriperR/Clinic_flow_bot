@@ -40,6 +40,32 @@ class ShiftService:
         shifts.sort(key=lambda item: item.id or 0)
         return shifts
 
+    async def get_preferred_free_doctor_slot(
+        self,
+        date: str,
+        shift_type: str,
+        doctor_name: str,
+        assistant_name: str | None = None,
+    ):
+        doctor_shifts = await self.list_doctor_shifts(date, shift_type, doctor_name)
+        free_slots = [shift for shift in doctor_shifts if shift.assistant_id is None]
+        if not free_slots:
+            return None
+
+        preferred = normalize_text(assistant_name)
+        if preferred:
+            scheduled_slots = [
+                shift
+                for shift in free_slots
+                if normalize_text(shift.scheduled_assistant_name) == preferred
+            ]
+            if scheduled_slots:
+                scheduled_slots.sort(key=lambda item: item.id or 0)
+                return scheduled_slots[0]
+
+        free_slots.sort(key=lambda item: item.id or 0)
+        return free_slots[0]
+
     async def get_current_shift(self, worker_id: int, date: str, shift_type: str):
         return await self.shifts.get_for_assistant(worker_id, date, shift_type)
 
