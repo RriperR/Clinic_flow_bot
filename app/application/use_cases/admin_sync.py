@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+﻿from datetime import datetime, timedelta
 
 import re
 
@@ -236,7 +236,7 @@ class AdminSyncService:
 
     async def export_shifts(self, date_str: str | None = None) -> None:
         if not date_str:
-            date_str = datetime.now().strftime("%d.%m.%Y")
+            date_str = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
         shifts = await self.shifts.list_by_date(date_str)
         headers = [
             "doctor_name",
