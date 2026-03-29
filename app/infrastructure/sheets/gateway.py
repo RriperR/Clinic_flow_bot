@@ -92,8 +92,17 @@ class SheetsGateway:
         existing = worksheet.get_all_values()
         if not existing:
             worksheet.append_row(headers)
+        worksheet.format(
+            "D:D",
+            {
+                "numberFormat": {
+                    "type": "DATE",
+                    "pattern": "dd.MM.yyyy",
+                }
+            },
+        )
         if rows:
-            worksheet.append_rows(list(rows), value_input_option="RAW")
+            worksheet.append_rows(list(rows), value_input_option="USER_ENTERED")
 
     # --- Helpers ---
     def _require_main_sheet(self, name: str):
