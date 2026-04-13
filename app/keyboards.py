@@ -116,6 +116,53 @@ def build_instrument_keyboard(instruments: Sequence[Instrument]) -> InlineKeyboa
     return builder.as_markup()
 
 
+async def build_registration_keyboard(registration: RegistrationService) -> InlineKeyboardMarkup:
+    workers = await registration.list_unregistered()
+    builder = InlineKeyboardBuilder()
+
+    if not workers:
+        builder.button(
+            text="Нет доступных сотрудников: все уже зарегистрированы",
+            callback_data="noop",
+        )
+
+    for worker in workers:
+        builder.button(
+            text=worker.full_name,
+            callback_data=f"select_worker:{worker.id}",
+        )
+
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def build_knowledge_section_keyboard(sections: Sequence[str]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for section in sections:
+        builder.button(text=section[:64], callback_data=f"kb_section:{section}")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def build_knowledge_manipulation_keyboard(section: str, manipulations: Sequence[str]) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for index, manipulation in enumerate(manipulations):
+        builder.button(
+            text=manipulation[:64],
+            callback_data=f"kb_manipulation:{section}:{index}",
+        )
+    builder.button(text="⬅️ К разделам", callback_data="kb_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def build_knowledge_manipulation_back_keyboard() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="⬅️ К разделам", callback_data="kb_menu")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
 PER_PAGE = 10
 
 

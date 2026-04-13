@@ -18,6 +18,7 @@ from app.application.use_cases.shift_management import ShiftService
 from app.application.use_cases.shift_admin import ShiftAdminService
 from app.application.use_cases.instrument_transfer import InstrumentTransferService
 from app.application.use_cases.instrument_admin import InstrumentAdminService
+from app.application.use_cases.knowledge_base import KnowledgeBaseService
 from app.application.use_cases.admin_sync import AdminSyncService
 from app.application.use_cases.reports import ReportsService
 from app.application.use_cases.scheduler import SurveyScheduler
@@ -43,6 +44,7 @@ class Container:
 
         # Application layer
         self.registration = RegistrationService(self.worker_repo, self.sheets_gateway)
+        self.knowledge_base = KnowledgeBaseService(self.sheets_gateway)
         self.survey_flow = SurveyFlowService(
             self.worker_repo,
             self.pair_repo,

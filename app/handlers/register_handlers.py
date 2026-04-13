@@ -26,7 +26,7 @@ def create_register_router(registration: RegistrationService) -> Router:
         )
         await message.answer(
             "Привет! Выбери себя в списке, чтобы зарегистрироваться:",
-            reply_markup=await kb.build_worker_keyboard(registration),
+            reply_markup=await kb.build_registration_keyboard(registration),
         )
 
     @router.callback_query(F.data.startswith("select_worker:"))
