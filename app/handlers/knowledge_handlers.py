@@ -18,7 +18,7 @@ def create_knowledge_router(service: KnowledgeBaseService) -> Router:
             reply_markup=kb.build_knowledge_section_keyboard(service.list_sections()),
         )
 
-    @router.message(Command("kb"))
+    @router.message(Command("knowledge"))
     async def open_knowledge(message: Message):
         await render_section_menu(message)
 

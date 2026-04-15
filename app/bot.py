@@ -32,7 +32,7 @@ async def main():
     await bot.set_my_commands(
         [
             BotCommand(command="start", description="зарегистрироваться"),
-            BotCommand(command="kb", description="открыть базу знаний"),
+            BotCommand(command="knowledge", description="открыть базу знаний"),
             BotCommand(command="shift", description="выбрать смену"),
             BotCommand(command="report", description="посмотреть отчёт"),
             BotCommand(command="move_instrument", description="перенести инструмент"),
