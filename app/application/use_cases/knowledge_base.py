@@ -9,6 +9,9 @@ class KnowledgeBaseService:
     def __init__(self, sheets_gateway: SheetsGateway):
         self.sheets_gateway = sheets_gateway
 
+    def is_configured(self) -> bool:
+        return bool(self.sheets_gateway.settings.knowledge_table.strip())
+
     def list_sections(self) -> list[str]:
         return self.sheets_gateway.list_sheet_titles()
 

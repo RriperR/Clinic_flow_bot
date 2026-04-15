@@ -8,22 +8,34 @@ from app.logger import setup_logger
 
 logger = setup_logger("knowledge_base", "knowledge_base.log")
 
+KNOWLEDGE_BASE_UNAVAILABLE_TEXT = (
+    "База знаний недоступна: не настроена таблица KNOWLEDGE_TABLE."
+)
+
 
 def create_knowledge_router(service: KnowledgeBaseService) -> Router:
     router = Router()
 
-    async def render_section_menu(target):
+    async def render_section_menu(target: Message) -> None:
+        if not service.is_configured():
+            await target.answer(KNOWLEDGE_BASE_UNAVAILABLE_TEXT)
+            return
+
         await target.answer(
             "База знаний: выберите раздел:",
             reply_markup=kb.build_knowledge_section_keyboard(service.list_sections()),
         )
 
     @router.message(Command("knowledge"))
-    async def open_knowledge(message: Message):
+    async def open_knowledge(message: Message) -> None:
         await render_section_menu(message)
 
     @router.callback_query(F.data == "kb_menu")
-    async def open_knowledge_by_button(callback: CallbackQuery):
+    async def open_knowledge_by_button(callback: CallbackQuery) -> None:
+        if not service.is_configured():
+            await callback.answer(KNOWLEDGE_BASE_UNAVAILABLE_TEXT, show_alert=True)
+            return
+
         await callback.message.edit_text(
             "База знаний: выберите раздел:",
             reply_markup=kb.build_knowledge_section_keyboard(service.list_sections()),
@@ -31,7 +43,7 @@ def create_knowledge_router(service: KnowledgeBaseService) -> Router:
         await callback.answer()
 
     @router.callback_query(F.data.startswith("kb_section:"))
-    async def select_section(callback: CallbackQuery):
+    async def select_section(callback: CallbackQuery) -> None:
         section = callback.data.split(":", 1)[1]
         manipulations = service.list_manipulations(section)
 
@@ -50,7 +62,7 @@ def create_knowledge_router(service: KnowledgeBaseService) -> Router:
         await callback.answer()
 
     @router.callback_query(F.data.startswith("kb_manipulation:"))
-    async def select_manipulation(callback: CallbackQuery):
+    async def select_manipulation(callback: CallbackQuery) -> None:
         _, section, index_text = callback.data.split(":", 2)
         try:
             index = int(index_text)

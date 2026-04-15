@@ -17,7 +17,7 @@ class SheetsGateway:
         self.knowledge_spreadsheet = (
             self._open_spreadsheet(settings.knowledge_table)
             if settings.knowledge_table
-            else self.spreadsheet
+            else None
         )
 
     def _build_client(self, credentials_path: Path) -> gspread.Client:
@@ -54,7 +54,7 @@ class SheetsGateway:
     def list_sheet_titles(self) -> list[str]:
         if not self.knowledge_spreadsheet:
             raise RuntimeError(
-                "Knowledge spreadsheet is not configured (TABLE or KNOWLEDGE_TABLE env missing)"
+                "Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)"
             )
         return [worksheet.title for worksheet in self.knowledge_spreadsheet.worksheets()]
 
@@ -145,7 +145,7 @@ class SheetsGateway:
     def _require_knowledge_sheet(self, name: str):
         if not self.knowledge_spreadsheet:
             raise RuntimeError(
-                "Knowledge spreadsheet is not configured (TABLE or KNOWLEDGE_TABLE env missing)"
+                "Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)"
             )
         return self.knowledge_spreadsheet.worksheet(name)
 
