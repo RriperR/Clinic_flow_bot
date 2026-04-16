@@ -57,8 +57,8 @@ def load_settings() -> Settings:
         shifts_source_sheet=os.getenv("SHIFTS_SOURCE_SHEET_NAME", "Расписание смен"),
         shift_report_sheet=os.getenv("SHIFT_REPORT_SHEET_NAME", "Отчёт по сменам"),
         answers_sheet=os.getenv("ANSWERS_SHEET_NAME", "Ответы"),
-        main_table=os.getenv("TABLE", ""),
-        knowledge_table=os.getenv("KNOWLEDGE_TABLE", ""),
+        main_table=os.getenv("TABLE", "").strip(),
+        knowledge_table=os.getenv("KNOWLEDGE_TABLE", "").strip(),
     )
 
     db = DbSettings(

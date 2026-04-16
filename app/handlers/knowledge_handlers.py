@@ -74,7 +74,7 @@ def create_knowledge_router(service: KnowledgeBaseService) -> Router:
         )
         await callback.answer()
 
-    @router.message(Command("knowledge"))
+    @router.message(Command("base"))
     async def open_knowledge(message: Message) -> None:
         await render_section_menu(message)
 

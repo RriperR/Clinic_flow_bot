@@ -5,6 +5,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.application.use_cases.knowledge_base import KnowledgeBaseService
 from app.application.use_cases.registration import RegistrationService
 from app.domain.entities import Worker, Cabinet, Instrument
 
@@ -139,7 +140,8 @@ async def build_registration_keyboard(registration: RegistrationService) -> Inli
 def build_knowledge_section_keyboard(sections: Sequence[str]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for index, section in enumerate(sections):
-        builder.button(text=section[:64], callback_data=f"kb_section:{index}")
+        label = KnowledgeBaseService.format_section_label(section)
+        builder.button(text=label[:64], callback_data=f"kb_section:{index}")
     builder.adjust(1)
     return builder.as_markup()
 

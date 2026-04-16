@@ -1,11 +1,18 @@
-from __future__ import annotations
-
-from typing import Iterable
+﻿from __future__ import annotations
 
 from app.infrastructure.sheets.gateway import SheetsGateway
 
 
 class KnowledgeBaseService:
+    SECTION_EMOJIS = {
+        "ИНСТРУМЕНТЫ": "🛠",
+        "МАТЕРИАЛ": "🧱",
+        "ОБОРУДОВАНИЕ": "💻",
+        "ДО ПРИЕМА": "🕔",
+        "ВО ВРЕМЯ ПРИЕМА": "🕕",
+        "ПОСЛЕ ПРИЕМА": "🕗",
+    }
+
     def __init__(self, sheets_gateway: SheetsGateway):
         self.sheets_gateway = sheets_gateway
 
@@ -50,18 +57,11 @@ class KnowledgeBaseService:
             extra = self._value(row, 5)
 
             if title and not item_number and not item_text:
-                lines.append(title.strip())
+                lines.append(self._format_section_title(title))
                 continue
 
             if item_number and item_text:
-                line = f"{item_number.strip()}. {item_text.strip()}"
-                if extra:
-                    extra_text = extra.strip()
-                    if extra_text.upper() == "ВАЖНО!!!":
-                        line = f"❗❗❗ {line}"
-                    else:
-                        line = f"{line} — {extra_text}"
-                lines.append(line)
+                lines.append(self._format_knowledge_item(item_number, item_text, extra))
 
         return "\n".join(lines) if lines else "Нет информации для выбранной манипуляции."
 
@@ -78,6 +78,28 @@ class KnowledgeBaseService:
                 break
             result.append(row)
         return result
+
+    @staticmethod
+    def _format_knowledge_item(item_number: str, item_text: str, extra: str) -> str:
+        line = f"{item_number.strip()}. {item_text.strip()}"
+        extra_text = extra.strip()
+        if not extra_text:
+            return line
+        if extra_text.upper() == "ВАЖНО!!!":
+            return f"{line} ❗❗❗"
+        return f"{line} — {extra_text}"
+
+    @classmethod
+    def format_section_label(cls, section: str) -> str:
+        normalized = section.strip()
+        emoji = cls.SECTION_EMOJIS.get(normalized.upper())
+        if not emoji:
+            return normalized
+        return f"{emoji}{normalized}"
+
+    @classmethod
+    def _format_section_title(cls, title: str) -> str:
+        return cls.format_section_label(title)
 
     @staticmethod
     def _value(row: list[str], index: int) -> str:
