@@ -15,6 +15,7 @@ from app.handlers.shift_admin_handlers import create_shift_admin_router
 from app.handlers.moves_handlers import create_moves_router
 from app.handlers.instrument_transfer_handlers import create_instrument_transfer_router
 from app.handlers.admin_panel_handlers import create_admin_panel_router
+from app.handlers.knowledge_handlers import create_knowledge_router
 from app.handlers.report_handlers import create_report_router
 from app.logger import setup_logger
 
@@ -31,6 +32,7 @@ async def main():
     await bot.set_my_commands(
         [
             BotCommand(command="start", description="зарегистрироваться"),
+            BotCommand(command="base", description="открыть базу знаний"),
             BotCommand(command="shift", description="выбрать смену"),
             BotCommand(command="report", description="посмотреть отчёт"),
             BotCommand(command="move_instrument", description="перенести инструмент"),
@@ -51,6 +53,7 @@ async def main():
     dp.include_router(
         create_admin_panel_router(container.instrument_admin, container.admin_access)
     )
+    dp.include_router(create_knowledge_router(container.knowledge_base))
 
     scheduler = AsyncIOScheduler()
     # scheduler.add_job(container.admin_sync.sync_pairs, "cron", hour=19, minute=50)

@@ -13,7 +13,12 @@ class SheetsGateway:
     def __init__(self, settings: SheetsSettings):
         self.settings = settings
         self.client = self._build_client(settings.credentials_path)
-        self.spreadsheet = self.client.open(settings.main_table) if settings.main_table else None
+        self.spreadsheet = self._open_spreadsheet(settings.main_table)
+        self.knowledge_spreadsheet = (
+            self._open_spreadsheet(settings.knowledge_table)
+            if settings.knowledge_table
+            else None
+        )
 
     def _build_client(self, credentials_path: Path) -> gspread.Client:
         scope = [
@@ -41,6 +46,17 @@ class SheetsGateway:
     def read_shifts(self) -> list[list[str]]:
         worksheet = self._require_main_sheet(self.settings.shifts_source_sheet)
         return worksheet.get_all_values()[1:]
+
+    def read_sheet_rows(self, sheet_name: str) -> list[list[str]]:
+        worksheet = self._require_knowledge_sheet(sheet_name)
+        return worksheet.get_all_values()
+
+    def list_sheet_titles(self) -> list[str]:
+        if not self.knowledge_spreadsheet:
+            raise RuntimeError(
+                "Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)"
+            )
+        return [worksheet.title for worksheet in self.knowledge_spreadsheet.worksheets()]
 
     # --- Writers ---
     def upsert_worker_registration(
@@ -105,8 +121,31 @@ class SheetsGateway:
             worksheet.append_rows(list(rows), value_input_option="USER_ENTERED")
 
     # --- Helpers ---
+    def _open_spreadsheet(self, spreadsheet_ref: str):
+        if not spreadsheet_ref:
+            return None
+
+        # Prefer opening by key if an ID or URL is provided, otherwise fall back to title.
+        if "/d/" in spreadsheet_ref:
+            spreadsheet_ref = spreadsheet_ref.split("/d/", 1)[1].split("/", 1)[0]
+
+        try:
+            return self.client.open_by_key(spreadsheet_ref)
+        except gspread.SpreadsheetNotFound:
+            try:
+                return self.client.open(spreadsheet_ref)
+            except gspread.SpreadsheetNotFound:
+                raise
+
     def _require_main_sheet(self, name: str):
         if not self.spreadsheet:
             raise RuntimeError("Main spreadsheet is not configured (TABLE env missing)")
         return self.spreadsheet.worksheet(name)
+
+    def _require_knowledge_sheet(self, name: str):
+        if not self.knowledge_spreadsheet:
+            raise RuntimeError(
+                "Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)"
+            )
+        return self.knowledge_spreadsheet.worksheet(name)
 
