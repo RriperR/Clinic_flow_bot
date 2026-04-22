@@ -1,6 +1,6 @@
 UV ?= uv
 
-.PHONY: venv install install-dev hooks-install lint typecheck format test check
+.PHONY: venv install install-dev hooks-install lint lint-docs type-check format test test-critical check
 
 venv:
 	$(UV) venv .venv
@@ -18,6 +18,9 @@ hooks-install:
 lint:
 	$(UV) run ruff check app tests
 
+lint-docs:
+	$(UV) run ruff check app tests --select D,DOC
+
 type-check:
 	$(UV) run mypy app
 
@@ -27,4 +30,7 @@ format:
 test:
 	$(UV) run pytest
 
-check: lint type-check test
+test-critical:
+	$(UV) run pytest
+
+check: lint test

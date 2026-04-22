@@ -44,8 +44,6 @@ select = [
   'B',
   'SIM',
   'I',
-  'D',
-  'DOC',
   'N',
   'S',
 ]
@@ -61,6 +59,7 @@ ignore = ['D415']
 convention = 'google'
 
 [lint.isort]
+combine-as-imports = true
 force-single-line = false
 order-by-type = false
 
