@@ -140,6 +140,34 @@ class InstrumentMove(Base):
     moved_at = Column(String(63))
 
 
+class KnowledgeSection(Base):
+    __tablename__ = "knowledge_sections"
+    id = Column(BigInteger, primary_key=True)
+    title = Column(Text, nullable=False)
+    position = Column(Integer, default=0, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+
+class KnowledgeManipulation(Base):
+    __tablename__ = "knowledge_manipulations"
+    id = Column(BigInteger, primary_key=True)
+    section_id = Column(BigInteger, nullable=False)
+    title = Column(Text, nullable=False)
+    position = Column(Integer, default=0, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+
+
+class KnowledgeItem(Base):
+    __tablename__ = "knowledge_items"
+    id = Column(BigInteger, primary_key=True)
+    manipulation_id = Column(BigInteger, nullable=False)
+    title = Column(Text, nullable=True)
+    item_number = Column(Text, nullable=True)
+    text = Column(Text, nullable=True)
+    extra = Column(Text, nullable=True)
+    position = Column(Integer, default=0, nullable=False)
+
+
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

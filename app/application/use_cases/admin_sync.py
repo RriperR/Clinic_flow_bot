@@ -11,6 +11,7 @@ from app.domain.repositories import (
     ShiftRepository,
 )
 from app.infrastructure.sheets.gateway import SheetsGateway
+from app.application.use_cases.knowledge_base import KnowledgeBaseService
 from app.text_utils import normalize_text
 
 
@@ -23,6 +24,7 @@ class AdminSyncService:
         surveys: SurveyRepository,
         answers: AnswerRepository,
         shifts: ShiftRepository,
+        knowledge_base: KnowledgeBaseService | None = None,
     ):
         self.gateway = gateway
         self.workers = workers
@@ -30,6 +32,7 @@ class AdminSyncService:
         self.surveys = surveys
         self.answers = answers
         self.shifts = shifts
+        self.knowledge_base = knowledge_base
 
     async def sync_workers(self) -> int:
         def read_metric(row: list[str], index: int) -> int:
@@ -206,6 +209,12 @@ class AdminSyncService:
         await self.sync_pairs()
         await self.sync_surveys()
         await self.sync_shifts()
+        await self.sync_knowledge_base()
+
+    async def sync_knowledge_base(self) -> int:
+        if not self.knowledge_base:
+            return 0
+        return await self.knowledge_base.sync_from_sheets()
 
     async def export_answers(self) -> None:
         answers = await self.answers.list_all()

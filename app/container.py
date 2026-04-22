@@ -9,6 +9,7 @@ from app.infrastructure.db.repositories import (
     SqlAlchemyCabinetRepository,
     SqlAlchemyInstrumentRepository,
     SqlAlchemyInstrumentMoveRepository,
+    SqlAlchemyKnowledgeBaseRepository,
 )
 from app.infrastructure.sheets.gateway import SheetsGateway
 from app.application.use_cases.admin_access import AdminAccessService
@@ -39,12 +40,16 @@ class Container:
         self.cabinet_repo = SqlAlchemyCabinetRepository()
         self.instrument_repo = SqlAlchemyInstrumentRepository()
         self.instrument_move_repo = SqlAlchemyInstrumentMoveRepository()
+        self.knowledge_base_repo = SqlAlchemyKnowledgeBaseRepository()
 
         self.sheets_gateway = SheetsGateway(self.settings.sheets)
 
         # Application layer
         self.registration = RegistrationService(self.worker_repo, self.sheets_gateway)
-        self.knowledge_base = KnowledgeBaseService(self.sheets_gateway)
+        self.knowledge_base = KnowledgeBaseService(
+            self.knowledge_base_repo,
+            self.sheets_gateway,
+        )
         self.survey_flow = SurveyFlowService(
             self.worker_repo,
             self.pair_repo,
@@ -75,6 +80,7 @@ class Container:
             self.survey_repo,
             self.answer_repo,
             self.shift_repo,
+            self.knowledge_base,
         )
         self.worker_report = WorkerReportService(self.worker_repo)
         self.reports = ReportsService(

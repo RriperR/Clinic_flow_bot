@@ -14,11 +14,7 @@ class SheetsGateway:
         self.settings = settings
         self.client = self._build_client(settings.credentials_path)
         self.spreadsheet = self._open_spreadsheet(settings.main_table)
-        self.knowledge_spreadsheet = (
-            self._open_spreadsheet(settings.knowledge_table)
-            if settings.knowledge_table
-            else None
-        )
+        self.knowledge_spreadsheet = None
 
     def _build_client(self, credentials_path: Path) -> gspread.Client:
         scope = [
@@ -52,11 +48,8 @@ class SheetsGateway:
         return worksheet.get_all_values()
 
     def list_sheet_titles(self) -> list[str]:
-        if not self.knowledge_spreadsheet:
-            raise RuntimeError(
-                "Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)"
-            )
-        return [worksheet.title for worksheet in self.knowledge_spreadsheet.worksheets()]
+        spreadsheet = self._require_knowledge_spreadsheet()
+        return [worksheet.title for worksheet in spreadsheet.worksheets()]
 
     # --- Writers ---
     def upsert_worker_registration(
@@ -143,9 +136,16 @@ class SheetsGateway:
         return self.spreadsheet.worksheet(name)
 
     def _require_knowledge_sheet(self, name: str):
-        if not self.knowledge_spreadsheet:
+        return self._require_knowledge_spreadsheet().worksheet(name)
+
+    def _require_knowledge_spreadsheet(self):
+        if not self.settings.knowledge_table:
             raise RuntimeError(
                 "Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)"
             )
-        return self.knowledge_spreadsheet.worksheet(name)
+        if not self.knowledge_spreadsheet:
+            self.knowledge_spreadsheet = self._open_spreadsheet(
+                self.settings.knowledge_table
+            )
+        return self.knowledge_spreadsheet
 
