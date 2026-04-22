@@ -40,11 +40,7 @@ class InstrumentAdminService:
         return await self.cabinets.delete(cabinet_id)
 
     async def list_instruments(self, cabinet_id: int, include_archived: bool = False):
-        return list(
-            await self.instruments.list_by_cabinet(
-                cabinet_id, include_archived=include_archived
-            )
-        )
+        return list(await self.instruments.list_by_cabinet(cabinet_id, include_archived=include_archived))
 
     async def get_instrument(self, instrument_id: int):
         return await self.instruments.get_by_id(instrument_id)

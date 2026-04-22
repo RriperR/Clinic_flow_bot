@@ -20,9 +20,7 @@ class RegistrationService:
             try:
                 worker = await self.workers.get_by_id(worker_id)
                 if worker:
-                    self.sheets.upsert_worker_registration(
-                        worker.full_name, chat_id=chat_id
-                    )
+                    self.sheets.upsert_worker_registration(worker.full_name, chat_id=chat_id)
             except Exception:
                 logger.exception("Failed to sync worker chat_id to Google Sheets")
         return success
@@ -33,18 +31,12 @@ class RegistrationService:
             try:
                 worker = await self.workers.get_by_id(worker_id)
                 if worker:
-                    self.sheets.upsert_worker_registration(
-                        worker.full_name, file_id=file_id
-                    )
+                    self.sheets.upsert_worker_registration(worker.full_name, file_id=file_id)
             except Exception:
                 logger.exception("Failed to sync worker file_id to Google Sheets")
 
-    async def get_by_chat_id(
-        self, chat_id: int, include_inactive: bool = False
-    ) -> Worker | None:
-        return await self.workers.get_by_chat_id(
-            chat_id, include_inactive=include_inactive
-        )
+    async def get_by_chat_id(self, chat_id: int, include_inactive: bool = False) -> Worker | None:
+        return await self.workers.get_by_chat_id(chat_id, include_inactive=include_inactive)
 
     async def get_by_id(self, worker_id: int) -> Worker | None:
         return await self.workers.get_by_id(worker_id)

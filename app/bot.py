@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
@@ -50,9 +50,7 @@ async def main():
     dp.include_router(create_shift_admin_router(container.shift_admin, container.admin_access))
     dp.include_router(create_moves_router(container.instrument_admin))
     dp.include_router(create_instrument_transfer_router(container.instrument_transfer))
-    dp.include_router(
-        create_admin_panel_router(container.instrument_admin, container.admin_access)
-    )
+    dp.include_router(create_admin_panel_router(container.instrument_admin, container.admin_access))
     dp.include_router(create_knowledge_router(container.knowledge_base))
 
     scheduler = AsyncIOScheduler()

@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.filters import StateFilter
@@ -27,10 +27,7 @@ async def start_pair_survey(
     dp: Dispatcher | None = None,
     file_id: str | None = None,
 ) -> None:
-    intro = (
-        f"{pair.date} с вами работает: {pair.object}.\n"
-        f"Пожалуйста, оцените коллегу: {pair.survey}"
-    )
+    intro = f"{pair.date} с вами работает: {pair.object}.\nПожалуйста, оцените коллегу: {pair.survey}"
     if file_id:
         await bot.send_photo(chat_id=chat_id, photo=file_id, caption=intro)
     else:
@@ -107,9 +104,7 @@ def create_survey_router(survey_service: SurveyFlowService) -> Router:
 
         await callback.message.edit_text(text=text, reply_markup=None)
 
-        await ask_next_question(
-            bot=callback.bot, user_id=callback.from_user.id, question_index=idx + 1, state=state
-        )
+        await ask_next_question(bot=callback.bot, user_id=callback.from_user.id, question_index=idx + 1, state=state)
 
     @router.message(StateFilter(SurveyState.answers))
     async def handle_text_answer(message: Message, state: FSMContext):
@@ -134,9 +129,7 @@ def create_survey_router(survey_service: SurveyFlowService) -> Router:
         )
 
         if idx < 5:
-            await ask_next_question(
-                bot=message.bot, user_id=message.from_user.id, question_index=idx + 1, state=state
-            )
+            await ask_next_question(bot=message.bot, user_id=message.from_user.id, question_index=idx + 1, state=state)
         else:
             survey = data.get("survey")
             try:

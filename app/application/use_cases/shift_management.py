@@ -19,9 +19,7 @@ class ShiftService:
         self.shifts = shifts
 
     async def get_worker(self, chat_id: int, include_inactive: bool = False):
-        return await self.workers.get_by_chat_id(
-            chat_id, include_inactive=include_inactive
-        )
+        return await self.workers.get_by_chat_id(chat_id, include_inactive=include_inactive)
 
     async def get_worker_by_id(self, worker_id: int):
         return await self.workers.get_by_id(worker_id)
@@ -34,8 +32,7 @@ class ShiftService:
         shifts = [
             shift
             for shift in await self.shifts.list_by_date(date)
-            if shift.type == shift_type
-            and normalize_text(shift.doctor_name) == normalized
+            if shift.type == shift_type and normalize_text(shift.doctor_name) == normalized
         ]
         shifts.sort(key=lambda item: item.id or 0)
         return shifts
@@ -55,9 +52,7 @@ class ShiftService:
         preferred = normalize_text(assistant_name)
         if preferred:
             scheduled_slots = [
-                shift
-                for shift in free_slots
-                if normalize_text(shift.scheduled_assistant_name) == preferred
+                shift for shift in free_slots if normalize_text(shift.scheduled_assistant_name) == preferred
             ]
             if scheduled_slots:
                 scheduled_slots.sort(key=lambda item: item.id or 0)
@@ -69,9 +64,7 @@ class ShiftService:
     async def get_current_shift(self, worker_id: int, date: str, shift_type: str):
         return await self.shifts.get_for_assistant(worker_id, date, shift_type)
 
-    async def list_free_shifts(
-        self, date: str, shift_type: str, assistant_name: str | None = None
-    ):
+    async def list_free_shifts(self, date: str, shift_type: str, assistant_name: str | None = None):
         shifts = [
             shift
             for shift in await self.shifts.list_by_date(date)
@@ -80,10 +73,7 @@ class ShiftService:
         preferred = normalize_text(assistant_name)
 
         def is_preferred(item) -> bool:
-            return (
-                item.scheduled_assistant_name
-                and normalize_text(item.scheduled_assistant_name) == preferred
-            )
+            return item.scheduled_assistant_name and normalize_text(item.scheduled_assistant_name) == preferred
 
         shifts.sort(
             key=lambda item: (
@@ -117,9 +107,7 @@ class ShiftService:
         shift_type: str,
         date: str,
     ) -> bool:
-        return await self.shifts.add_manual(
-            assistant_id, assistant_name, doctor_name, shift_type, date
-        )
+        return await self.shifts.add_manual(assistant_id, assistant_name, doctor_name, shift_type, date)
 
     async def get_shift_by_id(self, shift_id: int):
         return await self.shifts.get_by_id(shift_id)

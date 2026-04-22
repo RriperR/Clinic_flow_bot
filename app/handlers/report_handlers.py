@@ -14,9 +14,7 @@ def create_report_router(report_service: WorkerReportService) -> Router:
     @router.message(Command("report"))
     async def report(message: Message):
         try:
-            report_text = await report_service.build_report_for_chat_id(
-                message.from_user.id
-            )
+            report_text = await report_service.build_report_for_chat_id(message.from_user.id)
         except Exception:
             logger.exception("Failed to build worker report for chat_id=%s", message.from_user.id)
             await message.answer("Не удалось получить отчёт. Попробуйте позже.")

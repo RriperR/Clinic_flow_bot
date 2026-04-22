@@ -82,13 +82,9 @@ def create_admin_panel_router(
             label = cabinet.name
             if not cabinet.is_active:
                 label = f"{label} (🗄️ архив)"
-            builder.button(
-                text=label[:64], callback_data=f"instrument_list:{cabinet.id}:{view}"
-            )
+            builder.button(text=label[:64], callback_data=f"instrument_list:{cabinet.id}:{view}")
         toggle_view = "archived" if view == "active" else "active"
-        toggle_label = (
-            "🗂️ Показать архивные" if view == "active" else "✅ Показать активные"
-        )
+        toggle_label = "🗂️ Показать архивные" if view == "active" else "✅ Показать активные"
         builder.button(text=toggle_label, callback_data=f"instrument_cabinets:{toggle_view}")
         builder.button(text="⬅️ Назад", callback_data="admin_back")
         builder.adjust(1)
@@ -109,20 +105,14 @@ def create_admin_panel_router(
                 callback_data=f"instrument_manage:{instrument.id}:{cabinet_id}:{view}",
             )
         toggle_view = "archived" if view == "active" else "active"
-        toggle_label = (
-            "🗂️ Показать архивные" if view == "active" else "✅ Показать активные"
-        )
-        builder.button(
-            text=toggle_label, callback_data=f"instrument_list:{cabinet_id}:{toggle_view}"
-        )
+        toggle_label = "🗂️ Показать архивные" if view == "active" else "✅ Показать активные"
+        builder.button(text=toggle_label, callback_data=f"instrument_list:{cabinet_id}:{toggle_view}")
         builder.button(text="➕ Добавить инструмент", callback_data=f"instrument_add:{cabinet_id}")
         builder.button(text="🏢 К кабинетам", callback_data="admin_instruments")
         builder.adjust(1)
         return builder.as_markup()
 
-    def build_instrument_manage_keyboard(
-        instrument: Instrument, cabinet_id: int, view: str
-    ):
+    def build_instrument_manage_keyboard(instrument: Instrument, cabinet_id: int, view: str):
         builder = InlineKeyboardBuilder()
         builder.button(
             text="✏️ Переименовать",
@@ -249,9 +239,7 @@ def create_admin_panel_router(
         if not cabinet:
             await callback.answer("⛔ Кабинет не найден", show_alert=True)
             return
-        instruments = await admin_service.list_instruments(
-            cabinet_id, include_archived=True
-        )
+        instruments = await admin_service.list_instruments(cabinet_id, include_archived=True)
         if view == "archived":
             instruments = [item for item in instruments if not item.is_active]
         else:
@@ -261,9 +249,7 @@ def create_admin_panel_router(
             header += " (🗄️ архив)"
         await callback.message.edit_text(
             header,
-            reply_markup=build_instrument_list_keyboard(
-                instruments, cabinet_id=cabinet_id, view=view
-            ),
+            reply_markup=build_instrument_list_keyboard(instruments, cabinet_id=cabinet_id, view=view),
         )
 
     async def format_admin_entry(chat_id: str) -> str:
@@ -329,9 +315,7 @@ def create_admin_panel_router(
         if not await require_admin(callback):
             return
         await state.clear()
-        await callback.message.edit_text(
-            "🛠️ Админка:", reply_markup=build_admin_menu()
-        )
+        await callback.message.edit_text("🛠️ Админка:", reply_markup=build_admin_menu())
         await callback.answer()
 
     @router.callback_query(F.data == "admin_users")
@@ -347,9 +331,7 @@ def create_admin_panel_router(
         if not await require_admin(callback):
             return
         await state.clear()
-        await callback.message.edit_text(
-            "👮 Как добавить админа?", reply_markup=build_admin_add_menu()
-        )
+        await callback.message.edit_text("👮 Как добавить админа?", reply_markup=build_admin_add_menu())
         await callback.answer()
 
     @router.callback_query(F.data == "admin_user_add_manual")
@@ -448,9 +430,7 @@ def create_admin_panel_router(
         if admin_access.is_super_admin(chat_id):
             await callback.answer("⛔ Нельзя удалить супер-админа", show_alert=True)
             return
-        if chat_id == str(callback.from_user.id) and not admin_access.is_super_admin(
-            callback.from_user.id
-        ):
+        if chat_id == str(callback.from_user.id) and not admin_access.is_super_admin(callback.from_user.id):
             await callback.answer("⛔ Нельзя удалить себя", show_alert=True)
             return
         success = await admin_access.remove_admin(chat_id)
@@ -585,9 +565,7 @@ def create_admin_panel_router(
             await callback.answer("🗑️ Кабинет удалён")
             await render_cabinet_list(callback, view="active")
         else:
-            await callback.answer(
-                "⛔ Нельзя удалить кабинет с инструментами", show_alert=True
-            )
+            await callback.answer("⛔ Нельзя удалить кабинет с инструментами", show_alert=True)
 
     @router.callback_query(F.data == "admin_instruments")
     async def admin_instruments(callback: CallbackQuery, state: FSMContext):
@@ -625,9 +603,7 @@ def create_admin_panel_router(
         status = "✅ активен" if instrument.is_active else "🗄️ архив"
         await callback.message.edit_text(
             f"🧰 Инструмент: {instrument.name}\nСтатус: {status}",
-            reply_markup=build_instrument_manage_keyboard(
-                instrument, cabinet_id=int(cabinet_id), view=view
-            ),
+            reply_markup=build_instrument_manage_keyboard(instrument, cabinet_id=int(cabinet_id), view=view),
         )
         await callback.answer()
 
@@ -657,16 +633,12 @@ def create_admin_panel_router(
             return
         await admin_service.add_instrument(cabinet_id, name)
         await state.clear()
-        instruments = await admin_service.list_instruments(
-            cabinet_id, include_archived=True
-        )
+        instruments = await admin_service.list_instruments(cabinet_id, include_archived=True)
         instruments = [item for item in instruments if item.is_active]
         await message.answer("✅ Инструмент добавлен.")
         await message.answer(
             "🧰 Инструменты:",
-            reply_markup=build_instrument_list_keyboard(
-                instruments, cabinet_id=cabinet_id, view="active"
-            ),
+            reply_markup=build_instrument_list_keyboard(instruments, cabinet_id=cabinet_id, view="active"),
         )
 
     @router.callback_query(F.data.startswith("instrument_rename:"))
@@ -702,18 +674,14 @@ def create_admin_panel_router(
         await admin_service.rename_instrument(instrument_id, name)
         await state.clear()
         await message.answer("✅ Название обновлено.")
-        instruments = await admin_service.list_instruments(
-            cabinet_id, include_archived=True
-        )
+        instruments = await admin_service.list_instruments(cabinet_id, include_archived=True)
         if view == "archived":
             instruments = [item for item in instruments if not item.is_active]
         else:
             instruments = [item for item in instruments if item.is_active]
         await message.answer(
             "🧰 Инструменты:",
-            reply_markup=build_instrument_list_keyboard(
-                instruments, cabinet_id=cabinet_id, view=view
-            ),
+            reply_markup=build_instrument_list_keyboard(instruments, cabinet_id=cabinet_id, view=view),
         )
 
     @router.callback_query(F.data.startswith("instrument_archive:"))
@@ -745,9 +713,7 @@ def create_admin_panel_router(
             return
         await callback.message.edit_text(
             f"🗑️ Удалить инструмент «{instrument.name}»?",
-            reply_markup=build_instrument_delete_keyboard(
-                int(instrument_id), int(cabinet_id), view
-            ),
+            reply_markup=build_instrument_delete_keyboard(int(instrument_id), int(cabinet_id), view),
         )
         await callback.answer()
 

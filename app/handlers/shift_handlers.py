@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -89,9 +89,7 @@ def create_shift_router(
             )
             return
 
-        free_shifts = await shift_service.list_free_shifts(
-            date_str, shift_type, worker.full_name
-        )
+        free_shifts = await shift_service.list_free_shifts(date_str, shift_type, worker.full_name)
         if not free_shifts:
             await message.answer(
                 "Свободных смен не осталось",
@@ -128,13 +126,10 @@ def create_shift_router(
         if success:
             report_suffix = await build_report_suffix(worker)
             await callback.message.edit_text(
-                f"Готово ✔ {readable_shift(shift_type)} смена у {shift.doctor_name} закреплена за вами"
-                f"{report_suffix}"
+                f"Готово ✔ {readable_shift(shift_type)} смена у {shift.doctor_name} закреплена за вами{report_suffix}"
             )
         else:
-            await callback.message.edit_text(
-                "Не удалось записаться на смену. Скорее всего, её уже заняли."
-            )
+            await callback.message.edit_text("Не удалось записаться на смену. Скорее всего, её уже заняли.")
         await callback.answer()
 
     @router.callback_query(F.data.startswith("cancel_shift:"))
@@ -178,9 +173,7 @@ def create_shift_router(
     @router.callback_query(DoctorsPage.filter())
     async def doctors_paginate(cb: CallbackQuery, callback_data: DoctorsPage):
         workers = await shift_service.list_all_doctors()
-        await cb.message.edit_reply_markup(
-            reply_markup=build_all_doctors_keyboard(workers, page=callback_data.page)
-        )
+        await cb.message.edit_reply_markup(reply_markup=build_all_doctors_keyboard(workers, page=callback_data.page))
         await cb.answer()
 
     @router.callback_query(SelectDoctor.filter())
@@ -199,9 +192,7 @@ def create_shift_router(
             await cb.answer(DOCTOR_NOT_FOUND_MSG, show_alert=True)
             return
 
-        doctor_shifts = await shift_service.list_doctor_shifts(
-            date_str, shift_type, doctor.full_name
-        )
+        doctor_shifts = await shift_service.list_doctor_shifts(date_str, shift_type, doctor.full_name)
         if not doctor_shifts:
             await cb.message.edit_text(
                 "Этого врача сейчас нет в графике работы. Вы уверены что хотите создать с ним смену?",
@@ -229,9 +220,7 @@ def create_shift_router(
                     f"{report_suffix}"
                 )
             else:
-                await cb.message.edit_text(
-                    "Не удалось записаться на смену. Скорее всего, её уже заняли."
-                )
+                await cb.message.edit_text("Не удалось записаться на смену. Скорее всего, её уже заняли.")
             await cb.answer()
             return
 
@@ -284,8 +273,7 @@ def create_shift_router(
         if success:
             report_suffix = await build_report_suffix(worker)
             await cb.message.edit_text(
-                f"Готово ✔ {readable_shift(shift_type)} смена у {doctor.full_name} закреплена за вами"
-                f"{report_suffix}"
+                f"Готово ✔ {readable_shift(shift_type)} смена у {doctor.full_name} закреплена за вами{report_suffix}"
             )
         else:
             await cb.message.edit_text("Не удалось записаться на смену")

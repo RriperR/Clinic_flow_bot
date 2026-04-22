@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from aiogram import Router
 from aiogram.filters import Command

@@ -14,9 +14,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 
-engine = create_async_engine(
-    f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+engine = create_async_engine(f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
 async_session = async_sessionmaker(engine)
 
@@ -172,9 +170,7 @@ async def async_main():
         await conn.run_sync(Base.metadata.create_all)
 
     async with async_session() as session:
-        result = await session.execute(
-            select(Cabinet).where(Cabinet.name == "Стерилизационная")
-        )
+        result = await session.execute(select(Cabinet).where(Cabinet.name == "Стерилизационная"))
         if result.scalar_one_or_none() is None:
             session.add(Cabinet(name="Стерилизационная", is_active=True))
             await session.commit()

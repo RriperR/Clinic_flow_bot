@@ -71,9 +71,7 @@ from app.infrastructure.db.models import (
 class SqlAlchemyAdminRepository(AdminRepository):
     async def list_all(self):
         async with async_session() as session:
-            result = await session.execute(
-                select(AdminUserModel).order_by(AdminUserModel.chat_id)
-            )
+            result = await session.execute(select(AdminUserModel).order_by(AdminUserModel.chat_id))
             return [to_admin_entity(item) for item in result.scalars().all()]
 
     async def get_by_chat_id(self, chat_id: str) -> AdminUserEntity | None:
@@ -90,9 +88,7 @@ class SqlAlchemyAdminRepository(AdminRepository):
 
     async def add(self, admin: AdminUserEntity) -> bool:
         async with async_session() as session:
-            stmt = select(AdminUserModel.id).where(
-                AdminUserModel.chat_id == admin.chat_id
-            )
+            stmt = select(AdminUserModel.id).where(AdminUserModel.chat_id == admin.chat_id)
             existing = await session.execute(stmt)
             if existing.scalar_one_or_none():
                 return False
@@ -117,9 +113,7 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
     def _active_clause():
         return or_(WorkerModel.is_active.is_(True), WorkerModel.is_active.is_(None))
 
-    async def get_by_fullname(
-        self, full_name: str, include_inactive: bool = False
-    ) -> WorkerEntity | None:
+    async def get_by_fullname(self, full_name: str, include_inactive: bool = False) -> WorkerEntity | None:
         async with async_session() as session:
             stmt = select(WorkerModel).where(WorkerModel.full_name == full_name)
             if not include_inactive:
@@ -127,9 +121,7 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
             result = await session.execute(stmt)
             return to_worker_entity(result.scalar_one_or_none())
 
-    async def get_by_chat_id(
-        self, chat_id: int, include_inactive: bool = False
-    ) -> WorkerEntity | None:
+    async def get_by_chat_id(self, chat_id: int, include_inactive: bool = False) -> WorkerEntity | None:
         async with async_session() as session:
             stmt = select(WorkerModel).where(WorkerModel.chat_id == str(chat_id))
             if not include_inactive:
@@ -137,9 +129,7 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
             result = await session.execute(stmt)
             return to_worker_entity(result.scalar_one_or_none())
 
-    async def get_by_id(
-        self, worker_id: int, include_inactive: bool = False
-    ) -> WorkerEntity | None:
+    async def get_by_id(self, worker_id: int, include_inactive: bool = False) -> WorkerEntity | None:
         async with async_session() as session:
             stmt = select(WorkerModel).where(WorkerModel.id == worker_id)
             if not include_inactive:
@@ -176,11 +166,7 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
             if result.scalar_one_or_none():
                 return False
 
-            stmt = (
-                update(WorkerModel)
-                .where(WorkerModel.id == worker_id)
-                .values(chat_id=chat_id)
-            )
+            stmt = update(WorkerModel).where(WorkerModel.id == worker_id).values(chat_id=chat_id)
             await session.execute(stmt)
             await session.commit()
             return True
@@ -274,11 +260,7 @@ class SqlAlchemySurveyRepository(SurveyRepository):
 class SqlAlchemyPairRepository(PairRepository):
     async def list_ready_by_date(self, date: str):
         async with async_session() as session:
-            stmt = (
-                select(PairModel)
-                .where(PairModel.status == "ready", PairModel.date <= date)
-                .order_by(PairModel.id)
-            )
+            stmt = select(PairModel).where(PairModel.status == "ready", PairModel.date <= date).order_by(PairModel.id)
             result = await session.execute(stmt)
             return [to_pair_entity(item) for item in result.scalars().all()]
 
@@ -295,21 +277,13 @@ class SqlAlchemyPairRepository(PairRepository):
 
     async def update_status(self, pair_id: int, status: str) -> None:
         async with async_session() as session:
-            stmt = (
-                update(PairModel)
-                .where(PairModel.id == pair_id)
-                .values(status=status)
-            )
+            stmt = update(PairModel).where(PairModel.id == pair_id).values(status=status)
             await session.execute(stmt)
             await session.commit()
 
     async def reset_incomplete(self) -> None:
         async with async_session() as session:
-            stmt = (
-                update(PairModel)
-                .where(PairModel.status == "in_progress")
-                .values(status="ready")
-            )
+            stmt = update(PairModel).where(PairModel.status == "in_progress").values(status="ready")
             await session.execute(stmt)
             await session.commit()
 
@@ -342,9 +316,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
             await session.execute(delete(ShiftModel))
             await session.commit()
 
-    async def bulk_insert(
-        self, records: list[tuple[str, str, str, str | None, str | None, str | None]]
-    ) -> None:
+    async def bulk_insert(self, records: list[tuple[str, str, str, str | None, str | None, str | None]]) -> None:
         async with async_session() as session:
             for (
                 doctor_name,
@@ -494,9 +466,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
 
     async def list_by_date(self, date: str):
         async with async_session() as session:
-            result = await session.execute(
-                select(ShiftModel).where(ShiftModel.date == date)
-            )
+            result = await session.execute(select(ShiftModel).where(ShiftModel.date == date))
             return [to_shift_entity(item) for item in result.scalars().all()]
 
     async def list_all(self):
@@ -554,9 +524,7 @@ class SqlAlchemyCabinetRepository(CabinetRepository):
     async def has_instruments(self, cabinet_id: int) -> bool:
         async with async_session() as session:
             result = await session.execute(
-                select(InstrumentModel.id)
-                .where(InstrumentModel.cabinet_id == cabinet_id)
-                .limit(1)
+                select(InstrumentModel.id).where(InstrumentModel.cabinet_id == cabinet_id).limit(1)
             )
             return result.scalar_one_or_none() is not None
 
@@ -565,9 +533,7 @@ class SqlAlchemyInstrumentRepository(InstrumentRepository):
     async def list_by_cabinet(self, cabinet_id: int, include_archived: bool = False):
         async with async_session() as session:
             stmt = (
-                select(InstrumentModel)
-                .where(InstrumentModel.cabinet_id == cabinet_id)
-                .order_by(InstrumentModel.name)
+                select(InstrumentModel).where(InstrumentModel.cabinet_id == cabinet_id).order_by(InstrumentModel.name)
             )
             if not include_archived:
                 stmt = stmt.where(InstrumentModel.is_active.is_(True))
@@ -630,9 +596,7 @@ class SqlAlchemyInstrumentMoveRepository(InstrumentMoveRepository):
     async def list_recent(self, limit: int = 20):
         async with async_session() as session:
             result = await session.execute(
-                select(InstrumentMoveModel)
-                .order_by(InstrumentMoveModel.id.desc())
-                .limit(limit)
+                select(InstrumentMoveModel).order_by(InstrumentMoveModel.id.desc()).limit(limit)
             )
             return [to_instrument_move_entity(item) for item in result.scalars().all()]
 
@@ -674,9 +638,7 @@ class SqlAlchemyKnowledgeBaseRepository(KnowledgeBaseRepository):
 
                 for manipulation_entity, items in manipulations:
                     manipulation_entity.section_id = section.id
-                    manipulation = from_knowledge_manipulation_entity(
-                        manipulation_entity
-                    )
+                    manipulation = from_knowledge_manipulation_entity(manipulation_entity)
                     session.add(manipulation)
                     await session.flush()
 
@@ -691,9 +653,7 @@ class SqlAlchemyKnowledgeBaseRepository(KnowledgeBaseRepository):
                 .where(KnowledgeSectionModel.is_active.is_(True))
                 .order_by(KnowledgeSectionModel.position, KnowledgeSectionModel.id)
             )
-            return [
-                to_knowledge_section_entity(item) for item in result.scalars().all()
-            ]
+            return [to_knowledge_section_entity(item) for item in result.scalars().all()]
 
     async def get_section(self, section_id: int) -> KnowledgeSectionEntity | None:
         async with async_session() as session:
@@ -715,18 +675,11 @@ class SqlAlchemyKnowledgeBaseRepository(KnowledgeBaseRepository):
                     KnowledgeManipulationModel.id,
                 )
             )
-            return [
-                to_knowledge_manipulation_entity(item)
-                for item in result.scalars().all()
-            ]
+            return [to_knowledge_manipulation_entity(item) for item in result.scalars().all()]
 
-    async def get_manipulation(
-        self, manipulation_id: int
-    ) -> KnowledgeManipulationEntity | None:
+    async def get_manipulation(self, manipulation_id: int) -> KnowledgeManipulationEntity | None:
         async with async_session() as session:
-            manipulation = await session.get(
-                KnowledgeManipulationModel, manipulation_id
-            )
+            manipulation = await session.get(KnowledgeManipulationModel, manipulation_id)
             if manipulation and manipulation.is_active:
                 return to_knowledge_manipulation_entity(manipulation)
             return None

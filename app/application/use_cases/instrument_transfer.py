@@ -31,11 +31,7 @@ class InstrumentTransferService:
     async def get_sterilization_cabinet(self):
         cabinets = await self.cabinets.list_all()
         for cabinet in cabinets:
-            if (
-                cabinet.name
-                and normalize_text(cabinet.name)
-                == normalize_text(self.STERILIZATION_CABINET_NAME)
-            ):
+            if cabinet.name and normalize_text(cabinet.name) == normalize_text(self.STERILIZATION_CABINET_NAME):
                 return cabinet
         return None
 

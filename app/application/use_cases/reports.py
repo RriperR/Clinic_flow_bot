@@ -1,4 +1,4 @@
-﻿from collections import defaultdict
+from collections import defaultdict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -47,14 +47,10 @@ class ReportsService:
 
             if not worker_answers and not worker_shifts:
                 skipped_count += 1
-                self.logger.debug(
-                    "Skip report: no data for %s", worker.full_name
-                )
+                self.logger.debug("Skip report: no data for %s", worker.full_name)
                 continue
 
-            results, open_answers = self._calculate_scores_for_worker(
-                worker_answers, surveys_by_name, now
-            )
+            results, open_answers = self._calculate_scores_for_worker(worker_answers, surveys_by_name, now)
 
             try:
                 messages = self._format_report_text(
@@ -64,9 +60,7 @@ class ReportsService:
                 )
                 for message in messages:
                     await self._safe_send_long_message(bot, worker.chat_id, message)
-                self.logger.info(
-                    "Report sent: %s (%s)", worker.full_name, worker.chat_id
-                )
+                self.logger.info("Report sent: %s (%s)", worker.full_name, worker.chat_id)
                 sent_count += 1
             except Exception as exc:
                 self.logger.error(
@@ -150,9 +144,7 @@ class ReportsService:
 
                 elif q_type == "str" and survey_date >= one_month_ago:
                     if raw_answer and str(raw_answer).strip():
-                        open_answers[survey.speciality].append(
-                            (question_text, str(raw_answer).strip())
-                        )
+                        open_answers[survey.speciality].append((question_text, str(raw_answer).strip()))
 
         return results, open_answers
 

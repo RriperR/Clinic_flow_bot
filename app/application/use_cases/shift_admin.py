@@ -37,11 +37,7 @@ class ShiftAdminService:
 
     async def create_shift_today(self, doctor_name: str, shift_type: str) -> bool:
         date_str = self._today_str()
-        existing = [
-            s
-            for s in await self.list_today_shifts()
-            if s.doctor_name == doctor_name and s.type == shift_type
-        ]
+        existing = [s for s in await self.list_today_shifts() if s.doctor_name == doctor_name and s.type == shift_type]
         if existing:
             return False
         return await self.shifts.add_slot(doctor_name, date_str, shift_type)

@@ -64,7 +64,7 @@ force-single-line = false
 order-by-type = false
 
 [format]
-quote-style = 'single'
+quote-style = 'preserve'
 docstring-code-format = true
 indent-style = 'space'
 skip-magic-trailing-comma = false

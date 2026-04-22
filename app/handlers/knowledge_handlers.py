@@ -5,12 +5,8 @@ from aiogram.types import CallbackQuery, Message
 import app.keyboards as kb
 from app.application.use_cases.knowledge_base import KnowledgeBaseService
 
-KNOWLEDGE_BASE_NOT_CONFIGURED_TEXT = (
-    "База знаний не настроена: не указана таблица KNOWLEDGE_TABLE."
-)
-KNOWLEDGE_BASE_EMPTY_TEXT = (
-    "База знаний пока не загружена. Обратитесь к администратору."
-)
+KNOWLEDGE_BASE_NOT_CONFIGURED_TEXT = "База знаний не настроена: не указана таблица KNOWLEDGE_TABLE."
+KNOWLEDGE_BASE_EMPTY_TEXT = "База знаний пока не загружена. Обратитесь к администратору."
 SECTION_MENU_TEXT = "База знаний: выберите раздел:"
 INVALID_SELECTION_TEXT = "Неверный выбор."
 
@@ -55,9 +51,7 @@ def create_knowledge_router(service: KnowledgeBaseService) -> Router:
         if not manipulations:
             await callback.message.edit_text(
                 f"В разделе '{section.title}' пока нет доступных манипуляций.",
-                reply_markup=kb.build_knowledge_section_keyboard(
-                    await service.list_sections()
-                ),
+                reply_markup=kb.build_knowledge_section_keyboard(await service.list_sections()),
             )
             await callback.answer()
             return
@@ -112,9 +106,7 @@ def create_knowledge_router(service: KnowledgeBaseService) -> Router:
     @router.callback_query(F.data.startswith("kb_manipulation:"))
     async def select_manipulation(callback: CallbackQuery) -> None:
         try:
-            _, section_id_text, manipulation_id_text, page_text = callback.data.split(
-                ":", 3
-            )
+            _, section_id_text, manipulation_id_text, page_text = callback.data.split(":", 3)
             section_id = int(section_id_text)
             manipulation_id = int(manipulation_id_text)
             page = int(page_text)

@@ -136,9 +136,7 @@ def create_shift_admin_router(
     async def shift_create(callback: CallbackQuery):
         if not await require_admin(callback):
             return
-        await callback.message.edit_text(
-            "🛠️ Выберите тип смены:", reply_markup=build_create_type_keyboard()
-        )
+        await callback.message.edit_text("🛠️ Выберите тип смены:", reply_markup=build_create_type_keyboard())
         await callback.answer()
 
     @router.callback_query(F.data.startswith("admin_shift_create_type:"))
@@ -148,9 +146,7 @@ def create_shift_admin_router(
         _, shift_type = callback.data.split(":", 1)
         workers = await shift_admin.list_workers()
         if not workers:
-            await callback.message.edit_text(
-                "⚠️ Список сотрудников пуст.", reply_markup=build_create_type_keyboard()
-            )
+            await callback.message.edit_text("⚠️ Список сотрудников пуст.", reply_markup=build_create_type_keyboard())
             await callback.answer()
             return
         workers.sort(key=lambda w: w.full_name)
@@ -168,9 +164,7 @@ def create_shift_admin_router(
         workers = await shift_admin.list_workers()
         workers.sort(key=lambda w: w.full_name)
         await callback.message.edit_reply_markup(
-            reply_markup=build_doctors_keyboard(
-                workers, shift_type, page=int(page_str)
-            )
+            reply_markup=build_doctors_keyboard(workers, shift_type, page=int(page_str))
         )
         await callback.answer()
 

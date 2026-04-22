@@ -21,9 +21,7 @@ class SheetsGateway:
             "https://spreadsheets.google.com/feeds",
             "https://www.googleapis.com/auth/drive",
         ]
-        creds = ServiceAccountCredentials.from_json_keyfile_name(
-            str(credentials_path), scope
-        )
+        creds = ServiceAccountCredentials.from_json_keyfile_name(str(credentials_path), scope)
         return gspread.authorize(creds)
 
     # --- Readers ---
@@ -140,12 +138,7 @@ class SheetsGateway:
 
     def _require_knowledge_spreadsheet(self):
         if not self.settings.knowledge_table:
-            raise RuntimeError(
-                "Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)"
-            )
+            raise RuntimeError("Knowledge spreadsheet is not configured (KNOWLEDGE_TABLE env missing)")
         if not self.knowledge_spreadsheet:
-            self.knowledge_spreadsheet = self._open_spreadsheet(
-                self.settings.knowledge_table
-            )
+            self.knowledge_spreadsheet = self._open_spreadsheet(self.settings.knowledge_table)
         return self.knowledge_spreadsheet
-

@@ -73,9 +73,7 @@ def load_settings() -> Settings:
         token=os.getenv("BOT_TOKEN", ""),
         report_chat_id=os.getenv("REPORT_CHAT_ID"),
         admin_chat_ids=[
-            item.strip()
-            for item in os.getenv("ADMIN_CHAT_IDS", "").replace(";", ",").split(",")
-            if item.strip()
+            item.strip() for item in os.getenv("ADMIN_CHAT_IDS", "").replace(";", ",").split(",") if item.strip()
         ],
     )
 

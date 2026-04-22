@@ -6,9 +6,7 @@ from app.domain.entities import KnowledgeItem, KnowledgeManipulation, KnowledgeS
 from app.domain.repositories import KnowledgeBaseRepository
 from app.infrastructure.sheets.gateway import SheetsGateway
 
-KnowledgeCache = list[
-    tuple[KnowledgeSection, list[tuple[KnowledgeManipulation, list[KnowledgeItem]]]]
-]
+KnowledgeCache = list[tuple[KnowledgeSection, list[tuple[KnowledgeManipulation, list[KnowledgeItem]]]]]
 
 
 class KnowledgeBaseService:
@@ -37,9 +35,7 @@ class KnowledgeBaseService:
             return 0
 
         sections: KnowledgeCache = []
-        for section_position, section_title in enumerate(
-            self.sheets_gateway.list_sheet_titles()
-        ):
+        for section_position, section_title in enumerate(self.sheets_gateway.list_sheet_titles()):
             rows = self.sheets_gateway.read_sheet_rows(section_title)
             manipulations = self._parse_manipulations(rows)
             if not manipulations:
@@ -64,14 +60,10 @@ class KnowledgeBaseService:
     async def get_section(self, section_id: int) -> KnowledgeSection | None:
         return await self.repository.get_section(section_id)
 
-    async def list_manipulations(
-        self, section_id: int
-    ) -> Sequence[KnowledgeManipulation]:
+    async def list_manipulations(self, section_id: int) -> Sequence[KnowledgeManipulation]:
         return await self.repository.list_manipulations(section_id)
 
-    async def get_manipulation(
-        self, manipulation_id: int
-    ) -> KnowledgeManipulation | None:
+    async def get_manipulation(self, manipulation_id: int) -> KnowledgeManipulation | None:
         return await self.repository.get_manipulation(manipulation_id)
 
     async def build_manipulation_text(self, manipulation_id: int) -> str:
@@ -93,9 +85,7 @@ class KnowledgeBaseService:
 
         return "\n".join(lines) if lines else "Нет информации для выбранной манипуляции."
 
-    def _parse_manipulations(
-        self, rows: list[list[str]]
-    ) -> list[tuple[KnowledgeManipulation, list[KnowledgeItem]]]:
+    def _parse_manipulations(self, rows: list[list[str]]) -> list[tuple[KnowledgeManipulation, list[KnowledgeItem]]]:
         manipulations: list[tuple[KnowledgeManipulation, list[KnowledgeItem]]] = []
         seen: set[str] = set()
 

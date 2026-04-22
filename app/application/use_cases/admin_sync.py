@@ -1,4 +1,4 @@
-﻿import re
+import re
 from datetime import datetime, timedelta
 
 from app.application.use_cases.knowledge_base import KnowledgeBaseService
@@ -46,9 +46,7 @@ class AdminSyncService:
             return int(match.group(0)) if match else 0
 
         existing = {
-            normalize_text(w.full_name): w
-            for w in await self.workers.list_all(include_inactive=True)
-            if w.full_name
+            normalize_text(w.full_name): w for w in await self.workers.list_all(include_inactive=True) if w.full_name
         }
         rows = self.gateway.read_workers()
         created = 0

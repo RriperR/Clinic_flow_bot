@@ -18,9 +18,7 @@ def setup_logger(name: str, filename: str) -> logging.Logger:
             backupCount=7,
             encoding="utf-8",
         )
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 

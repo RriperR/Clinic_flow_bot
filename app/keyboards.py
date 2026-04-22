@@ -1,4 +1,4 @@
-﻿from collections.abc import Sequence
+from collections.abc import Sequence
 from datetime import datetime
 
 from aiogram.filters.callback_data import CallbackData
@@ -54,10 +54,12 @@ def build_confirm_keyboard(worker_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="Да, это я", callback_data=f"confirm_yes:{worker_id}",
+                    text="Да, это я",
+                    callback_data=f"confirm_yes:{worker_id}",
                 ),
                 InlineKeyboardButton(
-                    text="Нет", callback_data="confirm_no",
+                    text="Нет",
+                    callback_data="confirm_no",
                 ),
             ]
         ]
@@ -77,9 +79,7 @@ async def build_int_keyboard(question_index) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def build_shift_keyboard(
-    shifts: list[tuple[int, str]], include_show_all: bool = True
-) -> InlineKeyboardMarkup:
+def build_shift_keyboard(shifts: list[tuple[int, str]], include_show_all: bool = True) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for shift_id, name in shifts:
         builder.button(
@@ -210,9 +210,7 @@ def build_knowledge_manipulation_back_keyboard(
 PER_PAGE = 10
 
 
-def build_all_doctors_keyboard(
-    workers: Sequence[Worker], page: int = 0
-) -> InlineKeyboardMarkup:
+def build_all_doctors_keyboard(workers: Sequence[Worker], page: int = 0) -> InlineKeyboardMarkup:
     total = len(workers)
     start = page * PER_PAGE
     end = min(start + PER_PAGE, total)

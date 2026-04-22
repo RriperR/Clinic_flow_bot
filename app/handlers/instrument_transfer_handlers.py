@@ -94,9 +94,7 @@ def create_instrument_transfer_router(
             instrument_name=instrument.name,
         )
         await state.set_state(InstrumentTransferState.waiting_before_photo)
-        await callback.message.edit_text(
-            f"Инструмент: {instrument.name}\nОтправьте фото инструмента перед переносом."
-        )
+        await callback.message.edit_text(f"Инструмент: {instrument.name}\nОтправьте фото инструмента перед переносом.")
         await callback.answer()
 
     @router.message(StateFilter(InstrumentTransferState.waiting_before_photo), F.photo)
@@ -116,59 +114,41 @@ def create_instrument_transfer_router(
         sterilization = await transfer_service.get_sterilization_cabinet()
         if not sterilization:
             await state.clear()
-            await message.answer(
-                "Кабинет «Стерилизационная» не найден. Обратитесь к администратору."
-            )
+            await message.answer("Кабинет «Стерилизационная» не найден. Обратитесь к администратору.")
             return
 
         if sterilization.id == source_cabinet_id:
             last_move = await transfer_service.get_last_move_for_instrument(instrument_id)
             if last_move and last_move.to_cabinet_id == sterilization.id:
-                dest_cabinet = await transfer_service.get_cabinet(
-                    last_move.from_cabinet_id
-                )
+                dest_cabinet = await transfer_service.get_cabinet(last_move.from_cabinet_id)
                 if not dest_cabinet:
                     await state.clear()
-                    await message.answer(
-                        "Кабинет возврата не найден. Обратитесь к администратору."
-                    )
+                    await message.answer("Кабинет возврата не найден. Обратитесь к администратору.")
                     return
                 await state.update_data(allowed_dest_cabinet_ids=[dest_cabinet.id])
                 await message.answer(
                     "Выберите кабинет, куда возвращаем инструмент:",
-                    reply_markup=kb.build_cabinet_keyboard(
-                        [dest_cabinet], prefix="dest_cabinet"
-                    ),
+                    reply_markup=kb.build_cabinet_keyboard([dest_cabinet], prefix="dest_cabinet"),
                 )
                 return
 
             cabinets = await transfer_service.list_cabinets()
-            dest_cabinets = [
-                cabinet for cabinet in cabinets if cabinet.id != sterilization.id
-            ]
+            dest_cabinets = [cabinet for cabinet in cabinets if cabinet.id != sterilization.id]
             if not dest_cabinets:
                 await state.clear()
-                await message.answer(
-                    "Нет доступных кабинетов для возврата. Обратитесь к администратору."
-                )
+                await message.answer("Нет доступных кабинетов для возврата. Обратитесь к администратору.")
                 return
-            await state.update_data(
-                allowed_dest_cabinet_ids=[cabinet.id for cabinet in dest_cabinets]
-            )
+            await state.update_data(allowed_dest_cabinet_ids=[cabinet.id for cabinet in dest_cabinets])
             await message.answer(
                 "История перемещения не найдена. Выберите кабинет возврата:",
-                reply_markup=kb.build_cabinet_keyboard(
-                    dest_cabinets, prefix="dest_cabinet"
-                ),
+                reply_markup=kb.build_cabinet_keyboard(dest_cabinets, prefix="dest_cabinet"),
             )
             return
 
         await state.update_data(allowed_dest_cabinet_ids=[sterilization.id])
         await message.answer(
             "Выберите кабинет, куда переносим инструмент:",
-            reply_markup=kb.build_cabinet_keyboard(
-                [sterilization], prefix="dest_cabinet"
-            ),
+            reply_markup=kb.build_cabinet_keyboard([sterilization], prefix="dest_cabinet"),
         )
 
     @router.message(StateFilter(InstrumentTransferState.waiting_before_photo))
@@ -211,9 +191,7 @@ def create_instrument_transfer_router(
                     show_alert=True,
                 )
             else:
-                await callback.answer(
-                    "Перенос возможен только в «Стерилизационную»", show_alert=True
-                )
+                await callback.answer("Перенос возможен только в «Стерилизационную»", show_alert=True)
             return
 
         cabinet = await transfer_service.get_cabinet(cabinet_id)
@@ -227,8 +205,7 @@ def create_instrument_transfer_router(
         )
         await state.set_state(InstrumentTransferState.waiting_after_photo)
         await callback.message.edit_text(
-            f"Кабинет назначения: {cabinet.name}\n"
-            "Отправьте фото инструмента в новом кабинете."
+            f"Кабинет назначения: {cabinet.name}\nОтправьте фото инструмента в новом кабинете."
         )
         await callback.answer()
 
@@ -241,12 +218,7 @@ def create_instrument_transfer_router(
         dest_cabinet_id = data.get("dest_cabinet_id")
         before_photo_id = data.get("before_photo_id")
 
-        if (
-            instrument_id is None
-            or source_cabinet_id is None
-            or dest_cabinet_id is None
-            or before_photo_id is None
-        ):
+        if instrument_id is None or source_cabinet_id is None or dest_cabinet_id is None or before_photo_id is None:
             await state.clear()
             await message.answer("Сессия переноса сброшена. Начните заново: /move_instrument")
             return

@@ -1,4 +1,4 @@
-﻿from aiogram import F, Router
+from aiogram import F, Router
 from aiogram.filters import CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -21,9 +21,7 @@ def create_register_router(registration: RegistrationService) -> Router:
     @router.message(CommandStart())
     async def start(message: Message):
         user = message.from_user
-        logger.info(
-            "User (id=%s, username=%s) triggered '/start'", user.id, user.username
-        )
+        logger.info("User (id=%s, username=%s) triggered '/start'", user.id, user.username)
         await message.answer(
             "Привет! Выбери себя в списке, чтобы зарегистрироваться:",
             reply_markup=await kb.build_registration_keyboard(registration),
@@ -50,9 +48,7 @@ def create_register_router(registration: RegistrationService) -> Router:
 
         if not success:
             worker = await registration.get_by_chat_id(callback.from_user.id)
-            await callback.message.edit_text(
-                f"Этот аккаунт уже привязан к {worker.full_name}"
-            )
+            await callback.message.edit_text(f"Этот аккаунт уже привязан к {worker.full_name}")
             await callback.answer()
             logger.info("User (id=%s) tried to relink account", callback.from_user.id)
             return
@@ -83,17 +79,11 @@ def create_register_router(registration: RegistrationService) -> Router:
         worker = await registration.get_by_chat_id(message.from_user.id)
 
         if not worker:
-            inactive = await registration.get_by_chat_id(
-                message.from_user.id, include_inactive=True
-            )
+            inactive = await registration.get_by_chat_id(message.from_user.id, include_inactive=True)
             if inactive and not inactive.is_active:
-                await message.answer(
-                    "Ваш аккаунт деактивирован. Обратитесь к администратору."
-                )
+                await message.answer("Ваш аккаунт деактивирован. Обратитесь к администратору.")
             else:
-                await message.answer(
-                    "Похоже, ты ещё не выбрал(а) себя. Вернись к /start и зарегистрируйся."
-                )
+                await message.answer("Похоже, ты ещё не выбрал(а) себя. Вернись к /start и зарегистрируйся.")
             await state.clear()
             return
 

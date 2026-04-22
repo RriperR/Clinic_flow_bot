@@ -13,9 +13,7 @@ class AdminAccessService:
     ):
         self.admins = admins
         self.workers = workers
-        self.super_admin_ids = {
-            str(item).strip() for item in super_admin_ids if str(item).strip()
-        }
+        self.super_admin_ids = {str(item).strip() for item in super_admin_ids if str(item).strip()}
 
     def is_super_admin(self, chat_id: int | str) -> bool:
         return str(chat_id) in self.super_admin_ids
