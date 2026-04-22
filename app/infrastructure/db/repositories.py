@@ -9,6 +9,9 @@ from app.domain.entities import Shift as ShiftEntity
 from app.domain.entities import Cabinet as CabinetEntity
 from app.domain.entities import Instrument as InstrumentEntity
 from app.domain.entities import InstrumentMove as InstrumentMoveEntity
+from app.domain.entities import KnowledgeItem as KnowledgeItemEntity
+from app.domain.entities import KnowledgeManipulation as KnowledgeManipulationEntity
+from app.domain.entities import KnowledgeSection as KnowledgeSectionEntity
 from app.domain.repositories import (
     AdminRepository,
     WorkerRepository,
@@ -19,6 +22,7 @@ from app.domain.repositories import (
     CabinetRepository,
     InstrumentRepository,
     InstrumentMoveRepository,
+    KnowledgeBaseRepository,
 )
 from app.infrastructure.db.mappers import (
     from_admin_entity,
@@ -26,6 +30,9 @@ from app.infrastructure.db.mappers import (
     from_cabinet_entity,
     from_instrument_entity,
     from_instrument_move_entity,
+    from_knowledge_item_entity,
+    from_knowledge_manipulation_entity,
+    from_knowledge_section_entity,
     from_pair_entity,
     from_shift_entity,
     from_survey_entity,
@@ -35,6 +42,9 @@ from app.infrastructure.db.mappers import (
     to_cabinet_entity,
     to_instrument_entity,
     to_instrument_move_entity,
+    to_knowledge_item_entity,
+    to_knowledge_manipulation_entity,
+    to_knowledge_section_entity,
     to_pair_entity,
     to_shift_entity,
     to_survey_entity,
@@ -46,6 +56,9 @@ from app.infrastructure.db.models import (
     Cabinet as CabinetModel,
     Instrument as InstrumentModel,
     InstrumentMove as InstrumentMoveModel,
+    KnowledgeItem as KnowledgeItemModel,
+    KnowledgeManipulation as KnowledgeManipulationModel,
+    KnowledgeSection as KnowledgeSectionModel,
     Pair as PairModel,
     Shift as ShiftModel,
     Survey as SurveyModel,
@@ -636,3 +649,93 @@ class SqlAlchemyInstrumentMoveRepository(InstrumentMoveRepository):
         async with async_session() as session:
             move = await session.get(InstrumentMoveModel, move_id)
             return to_instrument_move_entity(move)
+
+
+class SqlAlchemyKnowledgeBaseRepository(KnowledgeBaseRepository):
+    async def replace_all(
+        self,
+        sections: list[
+            tuple[
+                KnowledgeSectionEntity,
+                list[tuple[KnowledgeManipulationEntity, list[KnowledgeItemEntity]]],
+            ]
+        ],
+    ) -> None:
+        async with async_session() as session:
+            async with session.begin():
+                await session.execute(delete(KnowledgeItemModel))
+                await session.execute(delete(KnowledgeManipulationModel))
+                await session.execute(delete(KnowledgeSectionModel))
+
+                for section_entity, manipulations in sections:
+                    section = from_knowledge_section_entity(section_entity)
+                    session.add(section)
+                    await session.flush()
+
+                    for manipulation_entity, items in manipulations:
+                        manipulation_entity.section_id = section.id
+                        manipulation = from_knowledge_manipulation_entity(
+                            manipulation_entity
+                        )
+                        session.add(manipulation)
+                        await session.flush()
+
+                        for item_entity in items:
+                            item_entity.manipulation_id = manipulation.id
+                            session.add(from_knowledge_item_entity(item_entity))
+
+    async def list_sections(self):
+        async with async_session() as session:
+            result = await session.execute(
+                select(KnowledgeSectionModel)
+                .where(KnowledgeSectionModel.is_active.is_(True))
+                .order_by(KnowledgeSectionModel.position, KnowledgeSectionModel.id)
+            )
+            return [
+                to_knowledge_section_entity(item) for item in result.scalars().all()
+            ]
+
+    async def get_section(self, section_id: int) -> KnowledgeSectionEntity | None:
+        async with async_session() as session:
+            section = await session.get(KnowledgeSectionModel, section_id)
+            if section and section.is_active:
+                return to_knowledge_section_entity(section)
+            return None
+
+    async def list_manipulations(self, section_id: int):
+        async with async_session() as session:
+            result = await session.execute(
+                select(KnowledgeManipulationModel)
+                .where(
+                    KnowledgeManipulationModel.section_id == section_id,
+                    KnowledgeManipulationModel.is_active.is_(True),
+                )
+                .order_by(
+                    KnowledgeManipulationModel.position,
+                    KnowledgeManipulationModel.id,
+                )
+            )
+            return [
+                to_knowledge_manipulation_entity(item)
+                for item in result.scalars().all()
+            ]
+
+    async def get_manipulation(
+        self, manipulation_id: int
+    ) -> KnowledgeManipulationEntity | None:
+        async with async_session() as session:
+            manipulation = await session.get(
+                KnowledgeManipulationModel, manipulation_id
+            )
+            if manipulation and manipulation.is_active:
+                return to_knowledge_manipulation_entity(manipulation)
+            return None
+
+    async def list_items(self, manipulation_id: int):
+        async with async_session() as session:
+            result = await session.execute(
+                select(KnowledgeItemModel)
+                .where(KnowledgeItemModel.manipulation_id == manipulation_id)
+                .order_by(KnowledgeItemModel.position, KnowledgeItemModel.id)
+            )
+            return [to_knowledge_item_entity(item) for item in result.scalars().all()]

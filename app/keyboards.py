@@ -7,7 +7,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.application.use_cases.knowledge_base import KnowledgeBaseService
 from app.application.use_cases.registration import RegistrationService
-from app.domain.entities import Worker, Cabinet, Instrument
+from app.domain.entities import (
+    Worker,
+    Cabinet,
+    Instrument,
+    KnowledgeSection,
+    KnowledgeManipulation,
+)
 
 
 class SelectDoctor(CallbackData, prefix="msd"):
@@ -137,11 +143,15 @@ async def build_registration_keyboard(registration: RegistrationService) -> Inli
     return builder.as_markup()
 
 
-def build_knowledge_section_keyboard(sections: Sequence[str]) -> InlineKeyboardMarkup:
+def build_knowledge_section_keyboard(
+    sections: Sequence[KnowledgeSection],
+) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    for index, section in enumerate(sections):
-        label = KnowledgeBaseService.format_section_label(section)
-        builder.button(text=label[:64], callback_data=f"kb_section:{index}")
+    for section in sections:
+        if section.id is None:
+            continue
+        label = KnowledgeBaseService.format_section_label(section.title)
+        builder.button(text=label[:64], callback_data=f"kb_section:{section.id}")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -150,8 +160,8 @@ KNOWLEDGE_MANIPULATIONS_PER_PAGE = 8
 
 
 def build_knowledge_manipulation_keyboard(
-    section_index: int,
-    manipulations: Sequence[str],
+    section_id: int,
+    manipulations: Sequence[KnowledgeManipulation],
     page: int = 0,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
@@ -160,20 +170,22 @@ def build_knowledge_manipulation_keyboard(
 
     for index in range(start, end):
         manipulation = manipulations[index]
+        if manipulation.id is None:
+            continue
         builder.button(
-            text=manipulation[:64],
-            callback_data=f"kb_manipulation:{section_index}:{index}:{page}",
+            text=manipulation.title[:64],
+            callback_data=f"kb_manipulation:{section_id}:{manipulation.id}:{page}",
         )
 
     if page > 0:
         builder.button(
             text="⬅️ Назад",
-            callback_data=f"kb_manipulations_page:{section_index}:{page - 1}",
+            callback_data=f"kb_manipulations_page:{section_id}:{page - 1}",
         )
     if end < len(manipulations):
         builder.button(
             text="Вперёд ➡️",
-            callback_data=f"kb_manipulations_page:{section_index}:{page + 1}",
+            callback_data=f"kb_manipulations_page:{section_id}:{page + 1}",
         )
 
     builder.button(text="⬅️ К разделам", callback_data="kb_menu")
@@ -182,13 +194,13 @@ def build_knowledge_manipulation_keyboard(
 
 
 def build_knowledge_manipulation_back_keyboard(
-    section_index: int,
+    section_id: int,
     page: int,
 ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(
         text="⬅️ К манипуляциям",
-        callback_data=f"kb_manipulations_page:{section_index}:{page}",
+        callback_data=f"kb_manipulations_page:{section_id}:{page}",
     )
     builder.button(text="⬅️ К разделам", callback_data="kb_menu")
     builder.adjust(1)

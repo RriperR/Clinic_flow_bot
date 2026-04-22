@@ -40,6 +40,12 @@ def create_admin_router(admin: AdminSyncService) -> Router:
         count = await admin.sync_shifts()
         await msg.edit_text(f"Смены обновлены. Загружено строк: {count}")
 
+    @router.message(Command("upd_knowledge"))
+    async def update_knowledge(message: Message):
+        msg = await message.answer("Обновляем базу знаний...")
+        count = await admin.sync_knowledge_base()
+        await msg.edit_text(f"База знаний обновлена. Загружено манипуляций: {count}")
+
     @router.message(Command("export"))
     async def export_data(message: Message):
         msg = await message.answer("Готовим выгрузку ответов...")

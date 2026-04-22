@@ -4,6 +4,9 @@ from app.domain.entities import (
     Cabinet as CabinetEntity,
     Instrument as InstrumentEntity,
     InstrumentMove as InstrumentMoveEntity,
+    KnowledgeItem as KnowledgeItemEntity,
+    KnowledgeManipulation as KnowledgeManipulationEntity,
+    KnowledgeSection as KnowledgeSectionEntity,
     Pair as PairEntity,
     Shift as ShiftEntity,
     Survey as SurveyEntity,
@@ -15,6 +18,9 @@ from app.infrastructure.db.models import (
     Cabinet as CabinetModel,
     Instrument as InstrumentModel,
     InstrumentMove as InstrumentMoveModel,
+    KnowledgeItem as KnowledgeItemModel,
+    KnowledgeManipulation as KnowledgeManipulationModel,
+    KnowledgeSection as KnowledgeSectionModel,
     Pair as PairModel,
     Shift as ShiftModel,
     Survey as SurveyModel,
@@ -283,4 +289,82 @@ def from_instrument_move_entity(entity: InstrumentMoveEntity) -> InstrumentMoveM
         after_photo_id=entity.after_photo_id,
         moved_by_chat_id=entity.moved_by_chat_id,
         moved_at=entity.moved_at,
+    )
+
+
+def to_knowledge_section_entity(
+    model: KnowledgeSectionModel | None,
+) -> KnowledgeSectionEntity | None:
+    if model is None:
+        return None
+    return KnowledgeSectionEntity(
+        id=model.id,
+        title=model.title,
+        position=model.position,
+        is_active=model.is_active,
+    )
+
+
+def from_knowledge_section_entity(
+    entity: KnowledgeSectionEntity,
+) -> KnowledgeSectionModel:
+    return KnowledgeSectionModel(
+        id=entity.id,
+        title=entity.title,
+        position=entity.position,
+        is_active=entity.is_active,
+    )
+
+
+def to_knowledge_manipulation_entity(
+    model: KnowledgeManipulationModel | None,
+) -> KnowledgeManipulationEntity | None:
+    if model is None:
+        return None
+    return KnowledgeManipulationEntity(
+        id=model.id,
+        section_id=model.section_id,
+        title=model.title,
+        position=model.position,
+        is_active=model.is_active,
+    )
+
+
+def from_knowledge_manipulation_entity(
+    entity: KnowledgeManipulationEntity,
+) -> KnowledgeManipulationModel:
+    return KnowledgeManipulationModel(
+        id=entity.id,
+        section_id=entity.section_id,
+        title=entity.title,
+        position=entity.position,
+        is_active=entity.is_active,
+    )
+
+
+def to_knowledge_item_entity(
+    model: KnowledgeItemModel | None,
+) -> KnowledgeItemEntity | None:
+    if model is None:
+        return None
+    return KnowledgeItemEntity(
+        id=model.id,
+        manipulation_id=model.manipulation_id,
+        title=model.title,
+        item_number=model.item_number,
+        text=model.text,
+        extra=model.extra,
+        position=model.position,
+    )
+
+
+def from_knowledge_item_entity(entity: KnowledgeItemEntity) -> KnowledgeItemModel:
+    return KnowledgeItemModel(
+        id=entity.id,
+        manipulation_id=entity.manipulation_id,
+        title=entity.title,
+        item_number=entity.item_number,
+        text=entity.text,
+        extra=entity.extra,
+        position=entity.position,
     )
