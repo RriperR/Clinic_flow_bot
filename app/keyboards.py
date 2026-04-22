@@ -1,18 +1,18 @@
-﻿from datetime import datetime
-from typing import Sequence
+﻿from collections.abc import Sequence
+from datetime import datetime
 
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.application.use_cases.knowledge_base import KnowledgeBaseService
 from app.application.use_cases.registration import RegistrationService
 from app.domain.entities import (
-    Worker,
     Cabinet,
     Instrument,
-    KnowledgeSection,
     KnowledgeManipulation,
+    KnowledgeSection,
+    Worker,
 )
 
 

@@ -1,8 +1,8 @@
 from app.domain.entities import Cabinet, Instrument
 from app.domain.repositories import (
     CabinetRepository,
-    InstrumentRepository,
     InstrumentMoveRepository,
+    InstrumentRepository,
 )
 
 

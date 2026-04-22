@@ -6,17 +6,17 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
 from app.container import build_container
-from app.infrastructure.db.models import async_main
-from app.handlers.register_handlers import create_register_router
-from app.handlers.survey_handlers import create_survey_router
 from app.handlers.admin_handlers import create_admin_router
-from app.handlers.shift_handlers import create_shift_router
-from app.handlers.shift_admin_handlers import create_shift_admin_router
-from app.handlers.moves_handlers import create_moves_router
-from app.handlers.instrument_transfer_handlers import create_instrument_transfer_router
 from app.handlers.admin_panel_handlers import create_admin_panel_router
+from app.handlers.instrument_transfer_handlers import create_instrument_transfer_router
 from app.handlers.knowledge_handlers import create_knowledge_router
+from app.handlers.moves_handlers import create_moves_router
+from app.handlers.register_handlers import create_register_router
 from app.handlers.report_handlers import create_report_router
+from app.handlers.shift_admin_handlers import create_shift_admin_router
+from app.handlers.shift_handlers import create_shift_router
+from app.handlers.survey_handlers import create_survey_router
+from app.infrastructure.db.models import async_main
 from app.logger import setup_logger
 
 

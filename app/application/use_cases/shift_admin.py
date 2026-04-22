@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.domain.repositories import WorkerRepository, ShiftRepository
+from app.domain.repositories import ShiftRepository, WorkerRepository
 from app.text_utils import normalize_text
 
 

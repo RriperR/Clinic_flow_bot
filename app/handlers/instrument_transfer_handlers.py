@@ -1,13 +1,12 @@
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
-from app.application.use_cases.instrument_transfer import InstrumentTransferService
 import app.keyboards as kb
+from app.application.use_cases.instrument_transfer import InstrumentTransferService
 from app.logger import setup_logger
-
 
 logger = setup_logger("instrument_transfer", "instrument_transfer.log")
 

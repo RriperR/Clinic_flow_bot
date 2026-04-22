@@ -1,10 +1,10 @@
 ﻿from datetime import datetime
 
-from aiogram import Router, F, Bot, Dispatcher
-from aiogram.types import CallbackQuery, Message
+from aiogram import Bot, Dispatcher, F, Router
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.filters import StateFilter
+from aiogram.types import CallbackQuery, Message
 
 from app.application.use_cases.survey_flow import SurveyFlowService
 from app.domain.entities import Pair

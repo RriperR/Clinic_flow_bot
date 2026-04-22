@@ -1,18 +1,19 @@
-from typing import Protocol, Sequence
+from collections.abc import Sequence
+from typing import Protocol
 
 from app.domain.entities import (
     AdminUser,
-    Worker,
-    Pair,
-    Survey,
     Answer,
-    Shift,
     Cabinet,
     Instrument,
     InstrumentMove,
-    KnowledgeSection,
-    KnowledgeManipulation,
     KnowledgeItem,
+    KnowledgeManipulation,
+    KnowledgeSection,
+    Pair,
+    Shift,
+    Survey,
+    Worker,
 )
 
 
@@ -91,7 +92,9 @@ class ShiftRepository(Protocol):
     async def get_for_assistant(self, assistant_id: int, date: str, shift_type: str) -> Shift | None: ...
     async def remove_assistant(self, assistant_id: int, date: str, shift_type: str) -> None: ...
     async def add_by_id(self, assistant_id: int, assistant_name: str, shift_id: int) -> bool: ...
-    async def add_manual(self, assistant_id: int, assistant_name: str, doctor_name: str, shift_type: str, date: str) -> bool: ...
+    async def add_manual(
+        self, assistant_id: int, assistant_name: str, doctor_name: str, shift_type: str, date: str
+    ) -> bool: ...
     async def add_slot(self, doctor_name: str, date: str, shift_type: str) -> bool: ...
     async def delete_by_id(self, shift_id: int) -> bool: ...
     async def list_by_date(self, date: str) -> Sequence[Shift]: ...

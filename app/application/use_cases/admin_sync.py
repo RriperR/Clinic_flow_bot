@@ -1,17 +1,16 @@
-﻿from datetime import datetime, timedelta
+﻿import re
+from datetime import datetime, timedelta
 
-import re
-
-from app.domain.entities import Worker, Pair, Survey
+from app.application.use_cases.knowledge_base import KnowledgeBaseService
+from app.domain.entities import Pair, Survey, Worker
 from app.domain.repositories import (
-    WorkerRepository,
-    PairRepository,
-    SurveyRepository,
     AnswerRepository,
+    PairRepository,
     ShiftRepository,
+    SurveyRepository,
+    WorkerRepository,
 )
 from app.infrastructure.sheets.gateway import SheetsGateway
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
 from app.text_utils import normalize_text
 
 

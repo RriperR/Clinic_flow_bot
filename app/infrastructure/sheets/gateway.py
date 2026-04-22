@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials

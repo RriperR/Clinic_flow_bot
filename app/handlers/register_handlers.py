@@ -2,14 +2,14 @@
 from aiogram.filters import CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
-from app.application.use_cases.registration import RegistrationService
 import app.keyboards as kb
+from app.application.use_cases.registration import RegistrationService
 from app.logger import setup_logger
 
-
 logger = setup_logger("reg_handlers", "reg.log")
+
 
 class RegistrationState(StatesGroup):
     waiting_photo = State()

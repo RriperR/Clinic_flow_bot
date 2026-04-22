@@ -3,8 +3,8 @@ from datetime import datetime
 from app.domain.entities import InstrumentMove
 from app.domain.repositories import (
     CabinetRepository,
-    InstrumentRepository,
     InstrumentMoveRepository,
+    InstrumentRepository,
 )
 from app.text_utils import normalize_text
 
@@ -74,8 +74,7 @@ class InstrumentTransferService:
         if from_cabinet_id == sterilization.id:
             last_move = await self.moves.get_last_for_instrument(instrument_id)
             if last_move and last_move.to_cabinet_id == sterilization.id:
-                if last_move.from_cabinet_id != to_cabinet_id:
-                    return False
+                return last_move.from_cabinet_id == to_cabinet_id
         else:
             if to_cabinet_id != sterilization.id:
                 return False

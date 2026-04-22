@@ -5,7 +5,6 @@ from aiogram.types import Message
 from app.application.use_cases.worker_report import WorkerReportService
 from app.logger import setup_logger
 
-
 logger = setup_logger("report", "report.log")
 
 

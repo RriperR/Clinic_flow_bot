@@ -3,7 +3,6 @@ from app.domain.repositories import WorkerRepository
 from app.infrastructure.sheets.gateway import SheetsGateway
 from app.logger import setup_logger
 
-
 logger = setup_logger("registration", "reg.log")
 
 

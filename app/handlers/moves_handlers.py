@@ -7,7 +7,6 @@ from app.application.use_cases.instrument_admin import InstrumentAdminService
 from app.domain.entities import InstrumentMove
 from app.logger import setup_logger
 
-
 logger = setup_logger("moves", "moves.log")
 
 

@@ -2,7 +2,6 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

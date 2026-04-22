@@ -7,7 +7,6 @@ from app.application.use_cases.shift_admin import ShiftAdminService
 from app.domain.entities import Shift, Worker
 from app.logger import setup_logger
 
-
 logger = setup_logger("shift_admin", "shift_admin.log")
 
 PER_PAGE = 10

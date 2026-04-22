@@ -1,29 +1,29 @@
+from app.application.use_cases.admin_access import AdminAccessService
+from app.application.use_cases.admin_sync import AdminSyncService
+from app.application.use_cases.instrument_admin import InstrumentAdminService
+from app.application.use_cases.instrument_transfer import InstrumentTransferService
+from app.application.use_cases.knowledge_base import KnowledgeBaseService
+from app.application.use_cases.registration import RegistrationService
+from app.application.use_cases.reports import ReportsService
+from app.application.use_cases.scheduler import SurveyScheduler
+from app.application.use_cases.shift_admin import ShiftAdminService
+from app.application.use_cases.shift_management import ShiftService
+from app.application.use_cases.survey_flow import SurveyFlowService
+from app.application.use_cases.worker_report import WorkerReportService
 from app.config import load_settings
 from app.infrastructure.db.repositories import (
     SqlAlchemyAdminRepository,
-    SqlAlchemyWorkerRepository,
-    SqlAlchemyPairRepository,
-    SqlAlchemySurveyRepository,
     SqlAlchemyAnswerRepository,
-    SqlAlchemyShiftRepository,
     SqlAlchemyCabinetRepository,
-    SqlAlchemyInstrumentRepository,
     SqlAlchemyInstrumentMoveRepository,
+    SqlAlchemyInstrumentRepository,
     SqlAlchemyKnowledgeBaseRepository,
+    SqlAlchemyPairRepository,
+    SqlAlchemyShiftRepository,
+    SqlAlchemySurveyRepository,
+    SqlAlchemyWorkerRepository,
 )
 from app.infrastructure.sheets.gateway import SheetsGateway
-from app.application.use_cases.admin_access import AdminAccessService
-from app.application.use_cases.registration import RegistrationService
-from app.application.use_cases.survey_flow import SurveyFlowService
-from app.application.use_cases.shift_management import ShiftService
-from app.application.use_cases.shift_admin import ShiftAdminService
-from app.application.use_cases.instrument_transfer import InstrumentTransferService
-from app.application.use_cases.instrument_admin import InstrumentAdminService
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
-from app.application.use_cases.admin_sync import AdminSyncService
-from app.application.use_cases.reports import ReportsService
-from app.application.use_cases.scheduler import SurveyScheduler
-from app.application.use_cases.worker_report import WorkerReportService
 
 
 class Container:

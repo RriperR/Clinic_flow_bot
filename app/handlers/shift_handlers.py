@@ -1,16 +1,16 @@
 ﻿from datetime import datetime
 
-from aiogram import Router, F
+from aiogram import F, Router
 from aiogram.filters import Command
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 from app.application.use_cases.shift_management import ShiftService
 from app.application.use_cases.worker_report import WorkerReportService
 from app.keyboards import (
-    build_shift_keyboard,
     build_all_doctors_keyboard,
     build_cancel_shift_keyboard,
     build_manual_shift_confirm_keyboard,
+    build_shift_keyboard,
     DoctorsPage,
     ManualShiftConfirm,
     SelectDoctor,
@@ -237,7 +237,8 @@ def create_shift_router(
 
         await cb.message.edit_text(
             "‼️‼️ Внимание! ‼️‼️\n"
-            "У этого врача уже есть смена с другим ассистентом, вы уверены что хотите создать с ним дополнительную смену?",
+            "У этого врача уже есть смена с другим ассистентом, "
+            "вы уверены что хотите создать с ним дополнительную смену?",
             reply_markup=build_manual_shift_confirm_keyboard(doctor.id),
         )
         await cb.answer()

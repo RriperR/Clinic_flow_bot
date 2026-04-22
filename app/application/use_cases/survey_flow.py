@@ -2,10 +2,10 @@ from datetime import datetime
 
 from app.domain.entities import Answer, Pair
 from app.domain.repositories import (
-    WorkerRepository,
+    AnswerRepository,
     PairRepository,
     SurveyRepository,
-    AnswerRepository,
+    WorkerRepository,
 )
 
 

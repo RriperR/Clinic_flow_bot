@@ -2,9 +2,8 @@
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher
-
-from app.domain.entities import Pair
 from app.application.use_cases.survey_flow import SurveyFlowService
+from app.domain.entities import Pair
 from app.handlers.survey_handlers import start_pair_survey
 from app.logger import setup_logger
 

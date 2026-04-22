@@ -1,28 +1,30 @@
-from sqlalchemy import select, update, delete, or_
+from sqlalchemy import delete, or_, select, update
 
-from app.domain.entities import AdminUser as AdminUserEntity
-from app.domain.entities import Worker as WorkerEntity
-from app.domain.entities import Pair as PairEntity
-from app.domain.entities import Survey as SurveyEntity
-from app.domain.entities import Answer as AnswerEntity
-from app.domain.entities import Shift as ShiftEntity
-from app.domain.entities import Cabinet as CabinetEntity
-from app.domain.entities import Instrument as InstrumentEntity
-from app.domain.entities import InstrumentMove as InstrumentMoveEntity
-from app.domain.entities import KnowledgeItem as KnowledgeItemEntity
-from app.domain.entities import KnowledgeManipulation as KnowledgeManipulationEntity
-from app.domain.entities import KnowledgeSection as KnowledgeSectionEntity
+from app.domain.entities import (
+    AdminUser as AdminUserEntity,
+    Answer as AnswerEntity,
+    Cabinet as CabinetEntity,
+    Instrument as InstrumentEntity,
+    InstrumentMove as InstrumentMoveEntity,
+    KnowledgeItem as KnowledgeItemEntity,
+    KnowledgeManipulation as KnowledgeManipulationEntity,
+    KnowledgeSection as KnowledgeSectionEntity,
+    Pair as PairEntity,
+    Shift as ShiftEntity,
+    Survey as SurveyEntity,
+    Worker as WorkerEntity,
+)
 from app.domain.repositories import (
     AdminRepository,
-    WorkerRepository,
-    PairRepository,
-    SurveyRepository,
     AnswerRepository,
-    ShiftRepository,
     CabinetRepository,
-    InstrumentRepository,
     InstrumentMoveRepository,
+    InstrumentRepository,
     KnowledgeBaseRepository,
+    PairRepository,
+    ShiftRepository,
+    SurveyRepository,
+    WorkerRepository,
 )
 from app.infrastructure.db.mappers import (
     from_admin_entity,
@@ -34,7 +36,6 @@ from app.infrastructure.db.mappers import (
     from_knowledge_manipulation_entity,
     from_knowledge_section_entity,
     from_pair_entity,
-    from_shift_entity,
     from_survey_entity,
     from_worker_entity,
     to_admin_entity,
@@ -53,6 +54,7 @@ from app.infrastructure.db.mappers import (
 from app.infrastructure.db.models import (
     AdminUser as AdminUserModel,
     Answer as AnswerModel,
+    async_session,
     Cabinet as CabinetModel,
     Instrument as InstrumentModel,
     InstrumentMove as InstrumentMoveModel,
@@ -63,7 +65,6 @@ from app.infrastructure.db.models import (
     Shift as ShiftModel,
     Survey as SurveyModel,
     Worker as WorkerModel,
-    async_session,
 )
 
 
@@ -661,28 +662,27 @@ class SqlAlchemyKnowledgeBaseRepository(KnowledgeBaseRepository):
             ]
         ],
     ) -> None:
-        async with async_session() as session:
-            async with session.begin():
-                await session.execute(delete(KnowledgeItemModel))
-                await session.execute(delete(KnowledgeManipulationModel))
-                await session.execute(delete(KnowledgeSectionModel))
+        async with async_session() as session, session.begin():
+            await session.execute(delete(KnowledgeItemModel))
+            await session.execute(delete(KnowledgeManipulationModel))
+            await session.execute(delete(KnowledgeSectionModel))
 
-                for section_entity, manipulations in sections:
-                    section = from_knowledge_section_entity(section_entity)
-                    session.add(section)
+            for section_entity, manipulations in sections:
+                section = from_knowledge_section_entity(section_entity)
+                session.add(section)
+                await session.flush()
+
+                for manipulation_entity, items in manipulations:
+                    manipulation_entity.section_id = section.id
+                    manipulation = from_knowledge_manipulation_entity(
+                        manipulation_entity
+                    )
+                    session.add(manipulation)
                     await session.flush()
 
-                    for manipulation_entity, items in manipulations:
-                        manipulation_entity.section_id = section.id
-                        manipulation = from_knowledge_manipulation_entity(
-                            manipulation_entity
-                        )
-                        session.add(manipulation)
-                        await session.flush()
-
-                        for item_entity in items:
-                            item_entity.manipulation_id = manipulation.id
-                            session.add(from_knowledge_item_entity(item_entity))
+                    for item_entity in items:
+                        item_entity.manipulation_id = manipulation.id
+                        session.add(from_knowledge_item_entity(item_entity))
 
     async def list_sections(self):
         async with async_session() as session:

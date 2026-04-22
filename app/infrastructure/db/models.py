@@ -1,10 +1,9 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import BigInteger, String, Text, Column, Boolean, Integer, select
-from sqlalchemy.ext.asyncio import AsyncAttrs, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
+from sqlalchemy import BigInteger, Boolean, Column, Integer, select, String, Text
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncAttrs, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 load_dotenv()
 

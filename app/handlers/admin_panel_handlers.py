@@ -11,7 +11,6 @@ from app.domain.entities import Cabinet, Instrument, Worker
 from app.logger import setup_logger
 from app.text_utils import normalize_text
 
-
 logger = setup_logger("admin_panel", "admin_panel.log")
 PER_PAGE = 10
 
@@ -212,7 +211,6 @@ def create_admin_panel_router(
         builder.adjust(1)
         return builder.as_markup()
 
-
     async def require_admin(callback: CallbackQuery | Message) -> bool:
         user_id = callback.from_user.id
         if not await admin_access.is_admin(user_id):
@@ -316,7 +314,6 @@ def create_admin_panel_router(
             "👤 Выберите сотрудника для добавления в админы:",
             reply_markup=build_admin_add_workers_keyboard(available, page),
         )
-
 
     @router.message(Command("admin"))
     async def admin_menu(message: Message, state: FSMContext):
