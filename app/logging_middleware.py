@@ -113,22 +113,35 @@ class UserActionLoggingMiddleware(BaseMiddleware):
     def _describe_action(self, event: TelegramObject) -> str:
         if isinstance(event, Message):
             if event.text and event.text.startswith("/"):
-                command = event.text.split(maxsplit=1)[0]
-                return f"message:{command}"
+                return event.text.split(maxsplit=1)[0]
             if event.photo:
-                return "message:photo"
+                return "photo"
             if event.document:
-                return "message:document"
+                return "document"
             if event.text:
-                return "message:text"
-            return "message:other"
+                return "text"
+            return "other_message"
 
         if isinstance(event, CallbackQuery):
+            button_text = self._resolve_callback_button_text(event)
+            if button_text:
+                return f"кнопка: {button_text}"
             callback_data = event.data or ""
             callback_prefix = callback_data.split(":", 1)[0] if callback_data else "empty"
-            return f"callback:{callback_prefix}"
+            return f"кнопка: {callback_prefix}"
 
         return type(event).__name__
+
+    def _resolve_callback_button_text(self, event: CallbackQuery) -> str | None:
+        if not event.message or not event.message.reply_markup:
+            return None
+
+        callback_data = event.data or ""
+        for row in event.message.reply_markup.inline_keyboard:
+            for button in row:
+                if button.callback_data == callback_data:
+                    return button.text
+        return None
 
     def _log_action(
         self,
@@ -143,17 +156,32 @@ class UserActionLoggingMiddleware(BaseMiddleware):
         level = actions_logger.warning if context.db_error or error else actions_logger.info
         icon = "✅" if status == "ok" else "❌"
         username = f"@{context.username}" if context.username else "-"
-        parts = [
+        file_parts = [
             f"👤 {context.display_name} | chat_id={context.chat_id} | {username}",
             f"➡️ {action}",
-            f"{icon} {status} · {duration_ms}ms · event_id={context.event_id}",
+            f"{icon} {status} · {duration_ms}ms",
         ]
         if context.worker_id is not None:
-            parts.append(f"worker_id={context.worker_id}")
+            file_parts.append(f"worker_id={context.worker_id}")
         if state_name:
-            parts.append(f"state={state_name}")
+            file_parts.append(f"state={state_name}")
         if context.db_error:
-            parts.append(f"db_user_lookup_error={context.db_error}")
+            file_parts.append(f"db_user_lookup_error={context.db_error}")
         if error:
-            parts.append(f"error={type(error).__name__}: {error}")
-        level("\n".join(parts), extra={"send_to_telegram": True})
+            file_parts.append(f"error={type(error).__name__}: {error}")
+
+        telegram_parts = [
+            f"👤 {context.display_name}",
+            action,
+            f"{icon} {status}",
+        ]
+        if error:
+            telegram_parts.append(type(error).__name__)
+
+        level(
+            "\n".join(file_parts),
+            extra={
+                "send_to_telegram": True,
+                "telegram_message": "\n".join(telegram_parts),
+            },
+        )

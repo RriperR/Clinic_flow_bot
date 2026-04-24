@@ -2,6 +2,7 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
+from aiogram.enums import ChatType
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
@@ -33,6 +34,10 @@ async def main():
     setup_telegram_logging(bot, settings.bot.report_chat_id)
 
     dp = Dispatcher()
+    dp.message.filter(lambda message: message.chat.type == ChatType.PRIVATE)
+    dp.callback_query.filter(
+        lambda callback: callback.message and callback.message.chat.type == ChatType.PRIVATE
+    )
     action_logging = UserActionLoggingMiddleware(container.worker_repo)
     dp.message.outer_middleware(action_logging)
     dp.callback_query.outer_middleware(action_logging)
@@ -72,13 +77,25 @@ async def main():
     scheduler.add_job(container.admin_sync.export_shifts, "cron", hour=4, minute=0)
     # scheduler.add_job(container.reports.send_monthly_reports, "cron", day=1, hour=16, minute=38, args=[bot])
     scheduler.start()
-    logger.info("Bot started")
+    logger.info(
+        "Bot started",
+        extra={
+            "send_to_telegram": True,
+            "telegram_message": "🤖 Бот запущен\nстатус: ok",
+        },
+    )
     logger.info("Scheduler started with jobs: %s", scheduler.get_jobs())
 
     try:
         await dp.start_polling(bot)
     finally:
-        logger.info("Bot shutdown")
+        logger.info(
+            "Bot shutdown",
+            extra={
+                "send_to_telegram": True,
+                "telegram_message": "🛑 Бот остановлен\nстатус: ok",
+            },
+        )
         scheduler.shutdown(wait=False)
         await shutdown_telegram_logging()
 
