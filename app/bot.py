@@ -2,10 +2,12 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand
+from aiogram.enums import ChatType
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
 from app.container import build_container
+from app.error_handlers import GlobalErrorHandler
 from app.handlers.admin_handlers import create_admin_router
 from app.handlers.admin_panel_handlers import create_admin_panel_router
 from app.handlers.instrument_transfer_handlers import create_instrument_transfer_router
@@ -17,7 +19,8 @@ from app.handlers.shift_admin_handlers import create_shift_admin_router
 from app.handlers.shift_handlers import create_shift_router
 from app.handlers.survey_handlers import create_survey_router
 from app.infrastructure.db.models import async_main
-from app.logger import setup_logger
+from app.logger import setup_logger, setup_telegram_logging, shutdown_telegram_logging
+from app.logging_middleware import UserActionLoggingMiddleware
 
 
 async def main():
@@ -28,7 +31,18 @@ async def main():
     logger = setup_logger("bot", "bot.log")
 
     bot = Bot(token=settings.bot.token)
+    setup_telegram_logging(bot, settings.bot.report_chat_id)
+
     dp = Dispatcher()
+    dp.message.filter(lambda message: message.chat.type == ChatType.PRIVATE)
+    dp.callback_query.filter(
+        lambda callback: callback.message and callback.message.chat.type == ChatType.PRIVATE
+    )
+    action_logging = UserActionLoggingMiddleware(container.worker_repo)
+    dp.message.outer_middleware(action_logging)
+    dp.callback_query.outer_middleware(action_logging)
+    dp.errors.register(GlobalErrorHandler(container.worker_repo))
+
     await bot.set_my_commands(
         [
             BotCommand(command="start", description="зарегистрироваться"),
@@ -63,9 +77,27 @@ async def main():
     scheduler.add_job(container.admin_sync.export_shifts, "cron", hour=4, minute=0)
     # scheduler.add_job(container.reports.send_monthly_reports, "cron", day=1, hour=16, minute=38, args=[bot])
     scheduler.start()
+    logger.info(
+        "Bot started",
+        extra={
+            "send_to_telegram": True,
+            "telegram_message": "🤖 Бот запущен\nстатус: ok",
+        },
+    )
     logger.info("Scheduler started with jobs: %s", scheduler.get_jobs())
 
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        logger.info(
+            "Bot shutdown",
+            extra={
+                "send_to_telegram": True,
+                "telegram_message": "🛑 Бот остановлен\nстатус: ok",
+            },
+        )
+        scheduler.shutdown(wait=False)
+        await shutdown_telegram_logging()
 
 
 if __name__ == "__main__":
