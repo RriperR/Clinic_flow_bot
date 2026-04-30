@@ -73,9 +73,7 @@ class UserActionLoggingMiddleware(BaseMiddleware):
     async def _build_context(self, event: TelegramObject) -> UserLogContext:
         event_id = uuid4().hex[:10]
         user = None
-        if isinstance(event, Message):
-            user = event.from_user
-        elif isinstance(event, CallbackQuery):
+        if isinstance(event, Message | CallbackQuery):
             user = event.from_user
 
         context = UserLogContext(
@@ -88,6 +86,13 @@ class UserActionLoggingMiddleware(BaseMiddleware):
         if not context.chat_id:
             return context
 
+        await self._load_worker_context(context)
+        return context
+
+    async def _load_worker_context(self, context: UserLogContext) -> None:
+        if not context.chat_id:
+            return
+
         try:
             worker = await self.workers.get_by_chat_id(
                 context.chat_id,
@@ -95,12 +100,11 @@ class UserActionLoggingMiddleware(BaseMiddleware):
             )
         except Exception as exc:
             context.db_error = f"{type(exc).__name__}: {exc}"
-            return context
+            return
 
         if worker:
             context.worker_id = worker.id
             context.full_name = worker.full_name
-        return context
 
     async def _get_state_name(self, state: FSMContext | None) -> str | None:
         if not state:

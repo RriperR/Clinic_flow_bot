@@ -126,6 +126,10 @@ class SqlAlchemyWorkerRepository(WorkerRepository):
             stmt = select(WorkerModel).where(WorkerModel.chat_id == str(chat_id))
             if not include_inactive:
                 stmt = stmt.where(self._active_clause())
+            stmt = stmt.order_by(
+                WorkerModel.is_active.desc().nulls_last(),
+                WorkerModel.id.desc(),
+            ).limit(1)
             result = await session.execute(stmt)
             return to_worker_entity(result.scalar_one_or_none())
 
