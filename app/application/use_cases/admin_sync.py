@@ -51,7 +51,9 @@ class AdminSyncService:
                 return int(match.group(0)) if match else 0
 
             existing = {
-                normalize_text(w.full_name): w for w in await self.workers.list_all(include_inactive=True) if w.full_name
+                normalize_text(w.full_name): w
+                for w in await self.workers.list_all(include_inactive=True)
+                if w.full_name
             }
             rows = self.gateway.read_workers()
             created = 0
@@ -80,6 +82,14 @@ class AdminSyncService:
                 if worker:
                     if worker.id is None:
                         continue
+                    if worker.chat_id and not chat_id:
+                        logger.warning(
+                            "sync_workers clears chat_id from empty Google Sheets value: "
+                            "worker_id=%s full_name=%s old_chat_id=%s",
+                            worker.id,
+                            worker.full_name,
+                            worker.chat_id,
+                        )
                     await self.workers.update_from_sync(
                         worker.id,
                         file_id=file_id or None,
