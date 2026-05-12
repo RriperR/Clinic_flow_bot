@@ -8,7 +8,7 @@ def detect_shift_type(hour: int, minute: int = 0) -> str | None:
     current_minutes = hour * 60 + minute
     if 7 * 60 + 30 <= current_minutes < 14 * 60:
         return "morning"
-    if 14 * 60 <= current_minutes < 20 * 60 + 30:
+    if 14 * 60 <= current_minutes < 21 * 60:
         return "evening"
     return None
 
