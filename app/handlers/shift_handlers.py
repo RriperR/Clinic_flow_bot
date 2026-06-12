@@ -4,7 +4,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
-from app.application.use_cases.shift_management import ShiftService
+from app.application.shifts.use_case import ShiftService
 from app.application.use_cases.worker_report import WorkerReportService
 from app.domain.shift_values import format_shift_date
 from app.keyboards import (

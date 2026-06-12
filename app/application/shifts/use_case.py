@@ -109,7 +109,7 @@ class ShiftService:
                 continue
             label = shift.doctor_name
             if preferred and is_preferred(shift):
-                label = f"⭐ {label}"
+                label = f"в­ђ {label}"
             result.append((shift.id, label))
         return result
 

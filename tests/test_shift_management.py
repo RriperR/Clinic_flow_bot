@@ -1,7 +1,7 @@
 from datetime import date
 
 from app.application.shifts.dto import ShiftSignupStatus
-from app.application.use_cases.shift_management import detect_shift_type, ShiftService
+from app.application.shifts.use_case import detect_shift_type, ShiftService
 from app.domain.entities import Shift, Worker
 from app.domain.shift_values import format_shift_date, ShiftType
 
