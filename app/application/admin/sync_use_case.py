@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, timedelta
 
+from app.application.admin.ports import AdminSyncGateway
 from app.application.knowledge_base.use_case import KnowledgeBaseService
 from app.domain.entities import Pair, Survey, Worker
 from app.domain.repositories import (
@@ -10,7 +11,6 @@ from app.domain.repositories import (
     SurveyRepository,
     WorkerRepository,
 )
-from app.infrastructure.sheets.gateway import SheetsGateway
 from app.logger import setup_logger
 from app.text_utils import normalize_text
 
@@ -20,7 +20,7 @@ logger = setup_logger("bot", "bot.log")
 class AdminSyncService:
     def __init__(
         self,
-        gateway: SheetsGateway,
+        gateway: AdminSyncGateway,
         workers: WorkerRepository,
         pairs: PairRepository,
         surveys: SurveyRepository,

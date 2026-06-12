@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.application.knowledge_base.ports import KnowledgeBaseSource
 from app.domain.entities import KnowledgeItem, KnowledgeManipulation, KnowledgeSection
 from app.domain.repositories import KnowledgeBaseRepository
-from app.infrastructure.sheets.gateway import SheetsGateway
 
 KnowledgeCache = list[tuple[KnowledgeSection, list[tuple[KnowledgeManipulation, list[KnowledgeItem]]]]]
 
@@ -22,7 +22,7 @@ class KnowledgeBaseService:
     def __init__(
         self,
         repository: KnowledgeBaseRepository,
-        sheets_gateway: SheetsGateway,
+        sheets_gateway: KnowledgeBaseSource,
     ):
         self.repository = repository
         self.sheets_gateway = sheets_gateway

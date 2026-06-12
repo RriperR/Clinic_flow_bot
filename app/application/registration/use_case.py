@@ -1,13 +1,13 @@
+from app.application.registration.ports import WorkerRegistrationSync
 from app.domain.entities import Worker
 from app.domain.repositories import WorkerRepository
-from app.infrastructure.sheets.gateway import SheetsGateway
 from app.logger import setup_logger
 
 logger = setup_logger("registration", "reg.log")
 
 
 class RegistrationService:
-    def __init__(self, workers: WorkerRepository, sheets: SheetsGateway | None = None):
+    def __init__(self, workers: WorkerRepository, sheets: WorkerRegistrationSync | None = None):
         self.workers = workers
         self.sheets = sheets
 
