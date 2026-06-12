@@ -83,10 +83,9 @@ def create_shift_router(
             return
 
         offer = await shift_service.prepare_signup(worker, date_str, shift_type)
-        current_shift = offer.current_shift
         if offer.current_shift:
             await message.answer(
-                f"У вас уже есть смена с {current_shift.doctor_name}",
+                f"У вас уже есть смена с {offer.current_shift.doctor_name}",
                 reply_markup=build_cancel_shift_keyboard(shift_type),
             )
             return
