@@ -1,4 +1,5 @@
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import IntegrityError
 
 from app.domain.entities import (
     AdminUser as AdminUserEntity,
@@ -385,26 +386,23 @@ class SqlAlchemyShiftRepository(ShiftRepository):
             await session.commit()
 
     async def add_by_id(self, assistant_id: int, assistant_name: str, shift_id: int) -> bool:
+        # Бизнес-правило записи проверяет домен. Здесь — только атомарные
+        # гарантии: условный UPDATE не даёт занять уже занятую смену, а
+        # уникальный индекс (assistant_id, date, type) — записаться дважды
+        # в один слот при гонке запросов.
         async with async_session() as session:
-            shift = await session.get(ShiftModel, shift_id)
-            if not shift or shift.assistant_id is not None:
-                return False
-
-            already_stmt = await session.execute(
-                select(ShiftModel).where(
-                    ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == shift.date,
-                    ShiftModel.type == shift.type,
-                )
+            stmt = (
+                update(ShiftModel)
+                .where(ShiftModel.id == shift_id, ShiftModel.assistant_id.is_(None))
+                .values(assistant_id=assistant_id, assistant_name=assistant_name, manual=False)
             )
-            if already_stmt.scalar_one_or_none():
+            try:
+                result = await session.execute(stmt)
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
                 return False
-
-            shift.assistant_id = assistant_id
-            shift.assistant_name = assistant_name
-            shift.manual = False
-            await session.commit()
-            return True
+            return result.rowcount > 0
 
     async def add_manual(
         self,
@@ -415,16 +413,6 @@ class SqlAlchemyShiftRepository(ShiftRepository):
         date: str,
     ) -> bool:
         async with async_session() as session:
-            already = await session.execute(
-                select(ShiftModel).where(
-                    ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == date,
-                    ShiftModel.type == shift_type,
-                )
-            )
-            if already.scalar_one_or_none():
-                return False
-
             shift = ShiftModel(
                 assistant_id=assistant_id,
                 assistant_name=assistant_name,
@@ -434,7 +422,11 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 manual=True,
             )
             session.add(shift)
-            await session.commit()
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                return False
             return True
 
     async def add_slot(self, doctor_name: str, date: str, shift_type: str) -> bool:

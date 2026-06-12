@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import BigInteger, Boolean, Column, Integer, select, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, Integer, select, String, Text, text, UniqueConstraint
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncAttrs, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -109,6 +109,11 @@ class Shift(Base):
     assistant_name = Column(Text, nullable=True)
     manual = Column(Boolean, default=False)
 
+    # Один ассистент — не больше одной смены в слоте (дата + тип).
+    # В Postgres NULL-значения assistant_id считаются различными,
+    # поэтому свободные смены (assistant_id IS NULL) индекс не ограничивает.
+    __table_args__ = (UniqueConstraint("assistant_id", "date", "type", name="uq_shift_assistant_slot"),)
+
 
 class Cabinet(Base):
     __tablename__ = "cabinets"
@@ -168,6 +173,15 @@ class KnowledgeItem(Base):
 async def async_main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # create_all не меняет уже существующие таблицы, поэтому уникальный
+        # индекс для смен создаём идемпотентно — иначе на старых БД инвариант
+        # «один ассистент — одна смена в слоте» не будет защищён от гонок.
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_shift_assistant_slot "
+                "ON shifts (assistant_id, date, type)"
+            )
+        )
 
     async with async_session() as session:
         result = await session.execute(select(Cabinet).where(Cabinet.name == "Стерилизационная"))
