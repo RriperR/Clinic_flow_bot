@@ -81,16 +81,16 @@ def create_shift_router(
         if not worker:
             return
 
-        current_shift = await shift_service.get_current_shift(worker.id, date_str, shift_type)
-        if current_shift:
+        offer = await shift_service.prepare_signup(worker, date_str, shift_type)
+        current_shift = offer.current_shift
+        if offer.current_shift:
             await message.answer(
                 f"У вас уже есть смена с {current_shift.doctor_name}",
                 reply_markup=build_cancel_shift_keyboard(shift_type),
             )
             return
 
-        free_shifts = await shift_service.list_free_shifts(date_str, shift_type, worker.full_name)
-        if not free_shifts:
+        if not offer.free_shifts:
             await message.answer(
                 "Свободных смен не осталось",
                 reply_markup=build_shift_keyboard([]),
@@ -98,7 +98,7 @@ def create_shift_router(
             return
         await message.answer(
             "Выберите доктора:",
-            reply_markup=build_shift_keyboard(free_shifts),
+            reply_markup=build_shift_keyboard(offer.free_shifts),
         )
 
     @router.callback_query(F.data.startswith("select_shift:"))
@@ -113,16 +113,13 @@ def create_shift_router(
         if not worker:
             return
 
-        shift = await shift_service.get_shift_by_id(shift_id)
+        selection = await shift_service.signup_by_shift_id(worker, date_str, shift_type, shift_id)
+        shift = selection.shift
         if not shift or shift.date != date_str or shift.type != shift_type:
             await callback.answer("Эта смена недоступна", show_alert=True)
             return
 
-        success = await shift_service.add_shift_by_id(
-            worker.id,
-            worker.full_name,
-            shift_id,
-        )
+        success = selection.success
         if success:
             report_suffix = await build_report_suffix(worker)
             await callback.message.edit_text(
@@ -154,7 +151,8 @@ def create_shift_router(
         if not worker:
             return
 
-        current_shift = await shift_service.get_current_shift(worker.id, date_str, shift_type)
+        offer = await shift_service.prepare_signup(worker, date_str, shift_type)
+        current_shift = offer.current_shift
         if current_shift:
             await callback.message.edit_text(
                 f"У вас уже есть смена с {current_shift.doctor_name}",
@@ -187,16 +185,26 @@ def create_shift_router(
         if not worker:
             return
 
-        doctor = await shift_service.get_worker_by_id(callback_data.doctor_id)
+        signup = await shift_service.signup_to_doctor(worker, callback_data.doctor_id, date_str, shift_type)
+        doctor = signup.doctor
         if not doctor:
             await cb.answer(DOCTOR_NOT_FOUND_MSG, show_alert=True)
             return
 
-        doctor_shifts = await shift_service.list_doctor_shifts(date_str, shift_type, doctor.full_name)
-        if not doctor_shifts:
+        if signup.requires_confirmation and not signup.has_schedule_slots:
             await cb.message.edit_text(
                 "Этого врача сейчас нет в графике работы. Вы уверены что хотите создать с ним смену?",
                 reply_markup=build_manual_shift_confirm_keyboard(doctor.id),
+            )
+            await cb.answer()
+            return
+
+        if signup.success:
+            report_suffix = await build_report_suffix(worker)
+            await cb.message.edit_text(
+                f"Готово ✔ {readable_shift(shift_type)} смена у {doctor.full_name} "
+                "закреплена за вами"
+                f"{report_suffix}"
             )
             await cb.answer()
             return
@@ -244,33 +252,13 @@ def create_shift_router(
         if not worker:
             return
 
-        doctor = await shift_service.get_worker_by_id(callback_data.doctor_id)
+        signup = await shift_service.confirm_manual_signup(worker, callback_data.doctor_id, date_str, shift_type)
+        doctor = signup.doctor
         if not doctor:
             await cb.answer(DOCTOR_NOT_FOUND_MSG, show_alert=True)
             return
 
-        free_slot = await shift_service.get_preferred_free_doctor_slot(
-            date_str,
-            shift_type,
-            doctor.full_name,
-            worker.full_name,
-        )
-        if free_slot and free_slot.id is not None:
-            success = await shift_service.add_shift_by_id(
-                worker.id,
-                worker.full_name,
-                free_slot.id,
-            )
-        else:
-            success = await shift_service.add_manual_shift(
-                worker.id,
-                worker.full_name,
-                doctor.full_name,
-                shift_type,
-                date_str,
-            )
-
-        if success:
+        if signup.success:
             report_suffix = await build_report_suffix(worker)
             await cb.message.edit_text(
                 f"Готово ✔ {readable_shift(shift_type)} смена у {doctor.full_name} закреплена за вами{report_suffix}"
