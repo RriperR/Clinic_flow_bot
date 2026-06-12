@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.application.use_cases.shift_signup_results import (
+from app.application.shifts.dto import (
     DoctorShiftSignup,
     ShiftSignupOffer,
     ShiftSignupSelection,
