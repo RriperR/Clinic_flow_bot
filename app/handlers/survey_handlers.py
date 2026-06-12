@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
-from app.application.use_cases.survey_flow import SurveyFlowService
+from app.application.surveys.flow_use_case import SurveyFlowService
 from app.domain.entities import Pair
 from app.keyboards import build_int_keyboard
 from app.logger import setup_logger

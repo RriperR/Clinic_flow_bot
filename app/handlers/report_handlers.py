@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.application.use_cases.worker_report import WorkerReportService
+from app.application.reports.worker_report_use_case import WorkerReportService
 from app.logger import setup_logger
 
 logger = setup_logger("report", "report.log")

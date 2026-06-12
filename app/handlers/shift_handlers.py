@@ -4,8 +4,8 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
+from app.application.reports.worker_report_use_case import WorkerReportService
 from app.application.shifts.use_case import ShiftService
-from app.application.use_cases.worker_report import WorkerReportService
 from app.domain.shift_values import format_shift_date
 from app.keyboards import (
     build_all_doctors_keyboard,

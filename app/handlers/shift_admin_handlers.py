@@ -2,8 +2,8 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.application.use_cases.admin_access import AdminAccessService
-from app.application.use_cases.shift_admin import ShiftAdminService
+from app.application.admin.access_use_case import AdminAccessService
+from app.application.shifts.admin_use_case import ShiftAdminService
 from app.domain.entities import Shift, Worker
 from app.logger import setup_logger
 

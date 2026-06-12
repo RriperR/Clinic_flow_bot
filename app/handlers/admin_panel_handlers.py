@@ -5,8 +5,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.application.use_cases.admin_access import AdminAccessService
-from app.application.use_cases.instrument_admin import InstrumentAdminService
+from app.application.admin.access_use_case import AdminAccessService
+from app.application.instruments.admin_use_case import InstrumentAdminService
 from app.domain.entities import Cabinet, Instrument, Worker
 from app.logger import setup_logger
 from app.text_utils import normalize_text

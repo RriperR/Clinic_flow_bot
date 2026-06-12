@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timedelta
 
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
+from app.application.knowledge_base.use_case import KnowledgeBaseService
 from app.domain.entities import Pair, Survey, Worker
 from app.domain.repositories import (
     AnswerRepository,

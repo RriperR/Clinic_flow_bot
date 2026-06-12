@@ -5,7 +5,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 import app.keyboards as kb
-from app.application.use_cases.instrument_transfer import InstrumentTransferService
+from app.application.instruments.transfer_use_case import InstrumentTransferService
 from app.logger import setup_logger
 
 logger = setup_logger("instrument_transfer", "instrument_transfer.log")

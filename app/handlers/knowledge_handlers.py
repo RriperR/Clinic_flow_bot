@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 import app.keyboards as kb
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
+from app.application.knowledge_base.use_case import KnowledgeBaseService
 
 KNOWLEDGE_BASE_NOT_CONFIGURED_TEXT = "База знаний не настроена: не указана таблица KNOWLEDGE_TABLE."
 KNOWLEDGE_BASE_EMPTY_TEXT = "База знаний пока не загружена. Обратитесь к администратору."

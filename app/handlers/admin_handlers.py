@@ -4,7 +4,7 @@ from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from app.application.use_cases.admin_sync import AdminSyncService
+from app.application.admin.sync_use_case import AdminSyncService
 
 
 def create_admin_router(admin: AdminSyncService) -> Router:

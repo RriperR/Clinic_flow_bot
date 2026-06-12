@@ -5,8 +5,8 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
-from app.application.use_cases.registration import RegistrationService
+from app.application.knowledge_base.use_case import KnowledgeBaseService
+from app.application.registration.use_case import RegistrationService
 from app.domain.entities import (
     Cabinet,
     Instrument,

@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.application.use_cases.instrument_admin import InstrumentAdminService
+from app.application.instruments.admin_use_case import InstrumentAdminService
 from app.domain.entities import InstrumentMove
 from app.logger import setup_logger
 
