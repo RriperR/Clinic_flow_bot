@@ -1,11 +1,9 @@
 from collections import defaultdict
 from datetime import datetime
 
-from aiogram import Bot, Dispatcher
-
 from app.application.surveys.flow_use_case import SurveyFlowService
+from app.application.surveys.ports import SurveyDelivery
 from app.domain.entities import Pair
-from app.handlers.survey_handlers import start_pair_survey
 from app.logger import setup_logger
 
 
@@ -14,7 +12,7 @@ class SurveyScheduler:
         self.survey_flow = survey_flow
         self.logger = setup_logger("surveys", "surveys.log")
 
-    async def send_surveys(self, bot: Bot, dp: Dispatcher) -> None:
+    async def send_surveys(self, delivery: SurveyDelivery) -> None:
         self.logger.info("📤 Запуск рассылки опросов")
         await self.survey_flow.reset_incomplete()
 
@@ -45,14 +43,7 @@ class SurveyScheduler:
             try:
                 await self.survey_flow.mark_pair_status(pair.id, "in_progress")
                 file_id = await self.survey_flow.get_worker_file_id(pair.object)
-                await start_pair_survey(
-                    bot,
-                    int(worker.chat_id),
-                    pair,
-                    self.survey_flow,
-                    dp=dp,
-                    file_id=file_id,
-                )
+                await delivery.start_pair_survey(int(worker.chat_id), pair, file_id=file_id)
                 self.logger.info("Отправлен опрос для %s от %s, id: %s", pair.subject, pair.date, pair.id)
             except Exception as exc:
                 self.logger.error("Failed to start pair survey: %s. id: %s", exc, pair.id)

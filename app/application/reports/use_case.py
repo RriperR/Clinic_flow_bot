@@ -2,8 +2,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from aiogram import Bot
-
+from app.application.reports.ports import MessageSender
 from app.domain.repositories import (
     AnswerRepository,
     ShiftRepository,
@@ -27,7 +26,7 @@ class ReportsService:
         self.shifts = shifts
         self.logger = setup_logger("reports", "reports.log")
 
-    async def send_monthly_reports(self, bot: Bot) -> None:
+    async def send_monthly_reports(self, sender: MessageSender) -> None:
         self.logger.info("Starting monthly reports generation")
         now = datetime.now(ZoneInfo("Europe/Moscow"))
 
@@ -60,7 +59,7 @@ class ReportsService:
                     worker_shifts,
                 )
                 for message in messages:
-                    await self._safe_send_long_message(bot, worker.chat_id, message)
+                    await self._safe_send_long_message(sender, worker.chat_id, message)
                 self.logger.info("Report sent: %s (%s)", worker.full_name, worker.chat_id)
                 sent_count += 1
             except Exception as exc:
@@ -222,6 +221,12 @@ class ReportsService:
             chunks.append(current.strip())
         return chunks
 
-    async def _safe_send_long_message(self, bot: Bot, chat_id: str, text: str, parse_mode: str = "Markdown"):
+    async def _safe_send_long_message(
+        self,
+        sender: MessageSender,
+        chat_id: str,
+        text: str,
+        parse_mode: str = "Markdown",
+    ):
         for part in self._split_message(text):
-            await bot.send_message(chat_id=chat_id, text=part, parse_mode=parse_mode)
+            await sender.send_message(chat_id=chat_id, text=part, parse_mode=parse_mode)
