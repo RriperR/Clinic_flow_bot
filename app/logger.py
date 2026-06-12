@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -39,13 +40,11 @@ class TelegramQueueLogHandler(logging.Handler):
             return
         try:
             await asyncio.wait_for(self.queue.join(), timeout=3)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.fallback_logger.warning("Telegram log queue drain timed out")
         self.task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await self.task
-        except asyncio.CancelledError:
-            pass
 
     def emit(self, record: logging.LogRecord) -> None:
         try:

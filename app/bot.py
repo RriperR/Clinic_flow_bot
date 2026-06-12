@@ -1,8 +1,8 @@
 import asyncio
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import BotCommand
 from aiogram.enums import ChatType
+from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 
