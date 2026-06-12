@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.application.knowledge_base.dto import KnowledgeContentItem, KnowledgeManipulationContent
 from app.application.knowledge_base.ports import KnowledgeBaseSource
 from app.domain.entities import KnowledgeItem, KnowledgeManipulation, KnowledgeSection
 from app.domain.repositories import KnowledgeBaseRepository
@@ -10,15 +11,6 @@ KnowledgeCache = list[tuple[KnowledgeSection, list[tuple[KnowledgeManipulation, 
 
 
 class KnowledgeBaseService:
-    SECTION_EMOJIS = {
-        "ИНСТРУМЕНТЫ": "🛠",
-        "МАТЕРИАЛ": "🧱",
-        "ОБОРУДОВАНИЕ": "💻",
-        "ДО ПРИЕМА": "🕔",
-        "ВО ВРЕМЯ ПРИЕМА": "🕕",
-        "ПОСЛЕ ПРИЕМА": "🕗",
-    }
-
     def __init__(
         self,
         repository: KnowledgeBaseRepository,
@@ -66,24 +58,19 @@ class KnowledgeBaseService:
     async def get_manipulation(self, manipulation_id: int) -> KnowledgeManipulation | None:
         return await self.repository.get_manipulation(manipulation_id)
 
-    async def build_manipulation_text(self, manipulation_id: int) -> str:
+    async def get_manipulation_content(self, manipulation_id: int) -> KnowledgeManipulationContent:
         items = await self.repository.list_items(manipulation_id)
-        lines: list[str] = []
-
-        for item in items:
-            title = item.title or ""
-            item_number = item.item_number or ""
-            item_text = item.text or ""
-            extra = item.extra or ""
-
-            if title and not item_number and not item_text:
-                lines.append(self._format_section_title(title))
-                continue
-
-            if item_number and item_text:
-                lines.append(self._format_knowledge_item(item_number, item_text, extra))
-
-        return "\n".join(lines) if lines else "Нет информации для выбранной манипуляции."
+        return KnowledgeManipulationContent(
+            items=[
+                KnowledgeContentItem(
+                    title=item.title,
+                    item_number=item.item_number,
+                    text=item.text,
+                    extra=item.extra,
+                )
+                for item in items
+            ]
+        )
 
     def _parse_manipulations(self, rows: list[list[str]]) -> list[tuple[KnowledgeManipulation, list[KnowledgeItem]]]:
         manipulations: list[tuple[KnowledgeManipulation, list[KnowledgeItem]]] = []
@@ -142,28 +129,6 @@ class KnowledgeBaseService:
                 break
             result.append(row)
         return result
-
-    @staticmethod
-    def _format_knowledge_item(item_number: str, item_text: str, extra: str) -> str:
-        line = f"{item_number.strip()}. {item_text.strip()}"
-        extra_text = extra.strip()
-        if not extra_text:
-            return line
-        if extra_text.upper() == "ВАЖНО!!!":
-            return f"{line} ❗❗❗"
-        return f"{line} — {extra_text}"
-
-    @classmethod
-    def format_section_label(cls, section: str) -> str:
-        normalized = section.strip()
-        emoji = cls.SECTION_EMOJIS.get(normalized.upper())
-        if not emoji:
-            return normalized
-        return f"{emoji}{normalized}"
-
-    @classmethod
-    def _format_section_title(cls, title: str) -> str:
-        return cls.format_section_label(title)
 
     @staticmethod
     def _value(row: list[str], index: int) -> str:

@@ -17,6 +17,7 @@ from app.keyboards import (
     SelectDoctor,
 )
 from app.logger import setup_logger
+from app.presentation.reports.formatters import format_worker_shift_report
 
 logger = setup_logger("shift", "shift.log")
 SHIFT_TIME_MSG = "Записываться на смену можно с 07:30 до 21:00"
@@ -63,7 +64,7 @@ def create_shift_router(
         if not report_service:
             return ""
         try:
-            report_text = report_service.build_report_for_worker(worker)
+            report_text = format_worker_shift_report(report_service.build_report_for_worker(worker))
         except Exception:
             logger.exception("Failed to build shift report for worker=%s", worker.id)
             return ""

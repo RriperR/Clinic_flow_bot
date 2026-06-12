@@ -24,6 +24,7 @@ from app.infrastructure.db.repositories import (
     SqlAlchemyWorkerRepository,
 )
 from app.infrastructure.sheets.gateway import SheetsGateway
+from app.presentation.reports.monthly_report_formatter import MonthlyReportTextRenderer
 
 
 class Container:
@@ -88,6 +89,7 @@ class Container:
             self.survey_repo,
             self.answer_repo,
             self.shift_repo,
+            MonthlyReportTextRenderer(),
         )
         self.scheduler = SurveyScheduler(self.survey_flow)
 
