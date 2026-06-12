@@ -9,7 +9,15 @@ from app.application.shifts.dto import (
 from app.domain.entities import Worker
 from app.domain.repositories import ShiftRepository, WorkerRepository
 from app.domain.shift_values import format_shift_date, ShiftType
+from app.domain.shifts.scheduling import ShiftSchedule, SignupRejection
 from app.text_utils import normalize_text
+
+_REJECTION_STATUS = {
+    SignupRejection.SHIFT_NOT_FOUND: ShiftSignupStatus.SHIFT_NOT_FOUND,
+    SignupRejection.SHIFT_UNAVAILABLE: ShiftSignupStatus.SHIFT_UNAVAILABLE,
+    SignupRejection.SHIFT_TAKEN: ShiftSignupStatus.SHIFT_TAKEN,
+    SignupRejection.ASSISTANT_ALREADY_ASSIGNED: ShiftSignupStatus.ALREADY_HAS_SHIFT,
+}
 
 
 def detect_shift_type(hour: int, minute: int = 0) -> ShiftType | None:
@@ -72,8 +80,13 @@ class ShiftService:
     async def get_current_shift(self, worker_id: int, date: str, shift_type: str):
         return await self.shifts.get_for_assistant(worker_id, date, shift_type)
 
+    async def _load_schedule(self, date: str, shift_type: str) -> ShiftSchedule:
+        shifts = await self.shifts.list_by_date(date)
+        return ShiftSchedule(date, shift_type, shifts)
+
     async def prepare_signup(self, worker: Worker, date: str, shift_type: str) -> ShiftSignupOffer:
-        current_shift = await self.get_current_shift(worker.id, date, shift_type)
+        schedule = await self._load_schedule(date, shift_type)
+        current_shift = schedule.assistant_shift(worker.id)
         if current_shift:
             return ShiftSignupOffer(
                 status=ShiftSignupStatus.CURRENT_SHIFT_EXISTS,
@@ -123,17 +136,16 @@ class ShiftService:
         shift_type: str,
         shift_id: int,
     ) -> ShiftSignupSelection:
+        schedule = await self._load_schedule(date, shift_type)
         shift = await self.get_shift_by_id(shift_id)
-        if not shift:
-            return ShiftSignupSelection(status=ShiftSignupStatus.SHIFT_NOT_FOUND, shift=None)
-        if shift.date != date or shift.type != shift_type:
-            return ShiftSignupSelection(status=ShiftSignupStatus.SHIFT_UNAVAILABLE, shift=shift)
-        if shift.assistant_id is not None:
-            return ShiftSignupSelection(status=ShiftSignupStatus.SHIFT_TAKEN, shift=shift)
-
-        current_shift = await self.get_current_shift(worker.id, date, shift_type)
-        if current_shift:
-            return ShiftSignupSelection(status=ShiftSignupStatus.ALREADY_HAS_SHIFT, shift=current_shift)
+        rejection = schedule.evaluate_signup(shift, worker.id)
+        if rejection:
+            rejected_shift = (
+                schedule.assistant_shift(worker.id)
+                if rejection == SignupRejection.ASSISTANT_ALREADY_ASSIGNED
+                else shift
+            )
+            return ShiftSignupSelection(status=_REJECTION_STATUS[rejection], shift=rejected_shift)
 
         success = await self.add_shift_by_id(worker.id, worker.full_name, shift_id)
         status = ShiftSignupStatus.SIGNED_UP if success else ShiftSignupStatus.SHIFT_TAKEN
@@ -211,14 +223,18 @@ class ShiftService:
             selection = await self.signup_by_shift_id(worker, date, shift_type, free_slot.id)
             status = selection.status
         else:
-            success = await self.add_manual_shift(
-                worker.id,
-                worker.full_name,
-                doctor.full_name,
-                shift_type,
-                date,
-            )
-            status = ShiftSignupStatus.SIGNED_UP if success else ShiftSignupStatus.ALREADY_HAS_SHIFT
+            schedule = await self._load_schedule(date, shift_type)
+            if schedule.has_assistant(worker.id):
+                status = ShiftSignupStatus.ALREADY_HAS_SHIFT
+            else:
+                success = await self.add_manual_shift(
+                    worker.id,
+                    worker.full_name,
+                    doctor.full_name,
+                    shift_type,
+                    date,
+                )
+                status = ShiftSignupStatus.SIGNED_UP if success else ShiftSignupStatus.ALREADY_HAS_SHIFT
 
         return DoctorShiftSignup(
             status=status,
