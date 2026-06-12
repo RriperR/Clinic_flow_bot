@@ -5,7 +5,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
 
 import app.keyboards as kb
-from app.application.use_cases.registration import RegistrationService
+from app.application.registration.use_case import RegistrationService
 from app.logger import setup_logger
 
 logger = setup_logger("reg_handlers", "reg.log")

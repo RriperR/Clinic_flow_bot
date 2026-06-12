@@ -5,8 +5,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
-from app.application.use_cases.registration import RegistrationService
+from app.application.registration.use_case import RegistrationService
 from app.domain.entities import (
     Cabinet,
     Instrument,
@@ -14,6 +13,7 @@ from app.domain.entities import (
     KnowledgeSection,
     Worker,
 )
+from app.presentation.knowledge_base.formatters import format_knowledge_section_label
 
 
 class SelectDoctor(CallbackData, prefix="msd"):
@@ -150,7 +150,7 @@ def build_knowledge_section_keyboard(
     for section in sections:
         if section.id is None:
             continue
-        label = KnowledgeBaseService.format_section_label(section.title)
+        label = format_knowledge_section_label(section.title)
         builder.button(text=label[:64], callback_data=f"kb_section:{section.id}")
     builder.adjust(1)
     return builder.as_markup()

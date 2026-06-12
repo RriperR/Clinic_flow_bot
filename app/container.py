@@ -1,15 +1,15 @@
-from app.application.use_cases.admin_access import AdminAccessService
-from app.application.use_cases.admin_sync import AdminSyncService
-from app.application.use_cases.instrument_admin import InstrumentAdminService
-from app.application.use_cases.instrument_transfer import InstrumentTransferService
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
-from app.application.use_cases.registration import RegistrationService
-from app.application.use_cases.reports import ReportsService
-from app.application.use_cases.scheduler import SurveyScheduler
-from app.application.use_cases.shift_admin import ShiftAdminService
-from app.application.use_cases.shift_management import ShiftService
-from app.application.use_cases.survey_flow import SurveyFlowService
-from app.application.use_cases.worker_report import WorkerReportService
+from app.application.admin.access_use_case import AdminAccessService
+from app.application.admin.sync_use_case import AdminSyncService
+from app.application.instruments.admin_use_case import InstrumentAdminService
+from app.application.instruments.transfer_use_case import InstrumentTransferService
+from app.application.knowledge_base.use_case import KnowledgeBaseService
+from app.application.registration.use_case import RegistrationService
+from app.application.reports.use_case import ReportsService
+from app.application.reports.worker_report_use_case import WorkerReportService
+from app.application.shifts.admin_use_case import ShiftAdminService
+from app.application.shifts.use_case import ShiftService
+from app.application.surveys.flow_use_case import SurveyFlowService
+from app.application.surveys.scheduler_use_case import SurveyScheduler
 from app.config import load_settings
 from app.infrastructure.db.repositories import (
     SqlAlchemyAdminRepository,
@@ -24,6 +24,7 @@ from app.infrastructure.db.repositories import (
     SqlAlchemyWorkerRepository,
 )
 from app.infrastructure.sheets.gateway import SheetsGateway
+from app.presentation.reports.monthly_report_formatter import MonthlyReportTextRenderer
 
 
 class Container:
@@ -88,6 +89,7 @@ class Container:
             self.survey_repo,
             self.answer_repo,
             self.shift_repo,
+            MonthlyReportTextRenderer(),
         )
         self.scheduler = SurveyScheduler(self.survey_flow)
 

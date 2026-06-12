@@ -3,7 +3,8 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 import app.keyboards as kb
-from app.application.use_cases.knowledge_base import KnowledgeBaseService
+from app.application.knowledge_base.use_case import KnowledgeBaseService
+from app.presentation.knowledge_base.formatters import format_knowledge_manipulation
 
 KNOWLEDGE_BASE_NOT_CONFIGURED_TEXT = "База знаний не настроена: не указана таблица KNOWLEDGE_TABLE."
 KNOWLEDGE_BASE_EMPTY_TEXT = "База знаний пока не загружена. Обратитесь к администратору."
@@ -119,7 +120,8 @@ def create_knowledge_router(service: KnowledgeBaseService) -> Router:
             await callback.answer(INVALID_SELECTION_TEXT, show_alert=True)
             return
 
-        text = await service.build_manipulation_text(manipulation_id)
+        content = await service.get_manipulation_content(manipulation_id)
+        text = format_knowledge_manipulation(content)
         await callback.message.edit_text(
             f"📌 {manipulation.title}\n\n{text}",
             reply_markup=kb.build_knowledge_manipulation_back_keyboard(
