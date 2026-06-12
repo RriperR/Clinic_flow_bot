@@ -4,6 +4,7 @@ from enum import StrEnum
 
 from app.domain.entities import Shift, Worker
 from app.domain.repositories import ShiftRepository, WorkerRepository
+from app.domain.shift_values import format_shift_date, ShiftType
 from app.text_utils import normalize_text
 
 
@@ -52,12 +53,12 @@ class DoctorShiftSignup:
         return self.status == ShiftSignupStatus.SIGNED_UP
 
 
-def detect_shift_type(hour: int, minute: int = 0) -> str | None:
+def detect_shift_type(hour: int, minute: int = 0) -> ShiftType | None:
     current_minutes = hour * 60 + minute
     if 7 * 60 + 30 <= current_minutes < 14 * 60:
-        return "morning"
+        return ShiftType.MORNING
     if 14 * 60 <= current_minutes < 21 * 60:
-        return "evening"
+        return ShiftType.EVENING
     return None
 
 
@@ -269,8 +270,8 @@ class ShiftService:
     async def get_shift_by_id(self, shift_id: int):
         return await self.shifts.get_by_id(shift_id)
 
-    def guess_shift_type_from_now(self) -> tuple[str | None, str]:
+    def guess_shift_type_from_now(self) -> tuple[ShiftType | None, str]:
         now = datetime.now()
         shift_type = detect_shift_type(now.hour, now.minute)
-        date_str = now.strftime("%d.%m.%Y")
+        date_str = format_shift_date(now)
         return shift_type, date_str

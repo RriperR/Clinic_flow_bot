@@ -12,6 +12,7 @@ from app.domain.entities import (
     Survey as SurveyEntity,
     Worker as WorkerEntity,
 )
+from app.domain.shift_values import parse_shift_type
 from app.infrastructure.db.models import (
     AdminUser as AdminUserModel,
     Answer as AnswerModel,
@@ -202,7 +203,7 @@ def to_shift_entity(model: ShiftModel | None) -> ShiftEntity | None:
         assistant_id=model.assistant_id,
         doctor_name=model.doctor_name,
         date=model.date,
-        type=model.type,
+        type=parse_shift_type(model.type),
         scheduled_assistant_name=model.scheduled_assistant_name,
         speciality=model.speciality,
         cabinet=model.cabinet,
@@ -217,7 +218,7 @@ def from_shift_entity(entity: ShiftEntity) -> ShiftModel:
         assistant_id=entity.assistant_id,
         doctor_name=entity.doctor_name,
         date=entity.date,
-        type=entity.type,
+        type=str(entity.type),
         scheduled_assistant_name=entity.scheduled_assistant_name,
         speciality=entity.speciality,
         cabinet=entity.cabinet,

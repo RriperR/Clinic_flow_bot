@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from app.domain.repositories import ShiftRepository, WorkerRepository
+from app.domain.shift_values import format_shift_date
 from app.text_utils import normalize_text
 
 
@@ -11,7 +12,7 @@ class ShiftAdminService:
 
     @staticmethod
     def _today_str() -> str:
-        return datetime.now().strftime("%d.%m.%Y")
+        return format_shift_date(datetime.now())
 
     async def list_today_shifts(self):
         date_str = self._today_str()

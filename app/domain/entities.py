@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from app.domain.shift_values import ShiftType
+
 
 @dataclass
 class Worker:
@@ -80,7 +82,7 @@ class Shift:
     assistant_id: int | None
     doctor_name: str
     date: str
-    type: str
+    type: ShiftType
     scheduled_assistant_name: str | None = None
     speciality: str | None = None
     cabinet: str | None = None
