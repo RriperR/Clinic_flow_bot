@@ -30,6 +30,7 @@ from app.domain.repositories import (
     SurveyRepository,
     WorkerRepository,
 )
+from app.domain.shifts.value_objects import ShiftImportRow
 from app.infrastructure.db.mappers import (
     from_admin_entity,
     from_answer_entity,
@@ -346,40 +347,22 @@ class SqlAlchemyShiftRepository(ShiftRepository):
             if owns:
                 await session.commit()
 
-    async def bulk_insert(self, records: list[tuple[str, str, str, str | None, str | None, str | None]]) -> None:
+    async def bulk_insert(self, records: list[ShiftImportRow]) -> None:
         async with _session_scope(self._session) as (session, owns):
-            for (
-                doctor_name,
-                date,
-                shift_type,
-                scheduled_assistant_name,
-                speciality,
-                cabinet,
-            ) in records:
+            for row in records:
                 session.add(
                     ShiftModel(
-                        doctor_name=doctor_name,
-                        date=date,
-                        type=shift_type,
-                        scheduled_assistant_name=scheduled_assistant_name,
-                        speciality=speciality,
-                        cabinet=cabinet,
+                        doctor_name=row.doctor_name,
+                        date=row.date,
+                        type=str(row.type),
+                        scheduled_assistant_name=row.scheduled_assistant_name,
+                        speciality=row.speciality,
+                        cabinet=row.cabinet,
                         manual=False,
                     )
                 )
             if owns:
                 await session.commit()
-
-    async def list_free(self, date: str, shift_type: str) -> list[tuple[int, str]]:
-        async with _session_scope(self._session) as (session, _):
-            result = await session.execute(
-                select(ShiftModel.id, ShiftModel.doctor_name).where(
-                    ShiftModel.date == date,
-                    ShiftModel.type == shift_type,
-                    ShiftModel.assistant_id.is_(None),
-                )
-            )
-            return [(row.id, row.doctor_name) for row in result.all()]
 
     async def get_by_id(self, shift_id: int) -> ShiftEntity | None:
         async with _session_scope(self._session) as (session, _):

@@ -3,6 +3,7 @@ from datetime import datetime
 
 from app.application.shifts.dto import (
     DoctorShiftSignup,
+    FreeShiftOption,
     ShiftSignupOffer,
     ShiftSignupSelection,
     ShiftSignupStatus,
@@ -107,7 +108,9 @@ class ShiftService:
         status = ShiftSignupStatus.READY if free_shifts else ShiftSignupStatus.NO_FREE_SHIFTS
         return ShiftSignupOffer(status=status, current_shift=None, free_shifts=free_shifts)
 
-    async def list_free_shifts(self, date: str, shift_type: str, assistant_name: str | None = None):
+    async def list_free_shifts(
+        self, date: str, shift_type: str, assistant_name: str | None = None
+    ) -> list[FreeShiftOption]:
         shifts = [
             shift
             for shift in await self.shifts.list_by_date(date)
@@ -126,14 +129,14 @@ class ShiftService:
             )
         )
 
-        result: list[tuple[int, str]] = []
+        result: list[FreeShiftOption] = []
         for shift in shifts:
             if shift.id is None:
                 continue
             label = shift.doctor_name
             if preferred and is_preferred(shift):
-                label = f"в­ђ {label}"
-            result.append((shift.id, label))
+                label = f"⭐ {label}"
+            result.append(FreeShiftOption(shift_id=shift.id, label=label))
         return result
 
     async def add_shift_by_id(self, worker_id: int, worker_name: str, shift_id: int) -> bool:

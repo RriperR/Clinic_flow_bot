@@ -11,6 +11,7 @@ from app.domain.repositories import (
     SurveyRepository,
     WorkerRepository,
 )
+from app.domain.shifts.value_objects import ShiftImportRow
 from app.logger import setup_logger
 from app.text_utils import normalize_text
 
@@ -200,7 +201,7 @@ class AdminSyncService:
         self._log_job_event("sync_shifts", "start")
         try:
             rows = self.gateway.read_shifts()
-            schedule: list[tuple[str, str, str, str | None, str | None, str | None]] = []
+            schedule: list[ShiftImportRow] = []
             for row in rows:
                 if len(row) < 7:
                     continue
@@ -221,13 +222,13 @@ class AdminSyncService:
                 if assistant_planned == "-----------":
                     assistant_planned = ""
                 schedule.append(
-                    (
-                        doctor_name,
-                        date,
-                        shift_type,
-                        assistant_planned or None,
-                        speciality or None,
-                        cabinet or None,
+                    ShiftImportRow(
+                        doctor_name=doctor_name,
+                        date=date,
+                        type=shift_type,
+                        scheduled_assistant_name=assistant_planned or None,
+                        speciality=speciality or None,
+                        cabinet=cabinet or None,
                     )
                 )
             if schedule:
