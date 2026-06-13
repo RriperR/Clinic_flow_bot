@@ -1,7 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from app.domain.repositories import ShiftRepository, WorkerRepository
-from app.domain.shift_values import format_shift_date
 from app.text_utils import normalize_text
 
 
@@ -11,12 +10,11 @@ class ShiftAdminService:
         self.shifts = shifts
 
     @staticmethod
-    def _today_str() -> str:
-        return format_shift_date(datetime.now())
+    def _today() -> date:
+        return datetime.now().date()
 
     async def list_today_shifts(self):
-        date_str = self._today_str()
-        shifts = list(await self.shifts.list_by_date(date_str))
+        shifts = list(await self.shifts.list_by_date(self._today()))
         order = {"morning": 0, "evening": 1}
         shifts.sort(
             key=lambda s: (
@@ -37,16 +35,15 @@ class ShiftAdminService:
         return await self.shifts.get_by_id(shift_id)
 
     async def create_shift_today(self, doctor_name: str, shift_type: str) -> bool:
-        date_str = self._today_str()
         existing = [s for s in await self.list_today_shifts() if s.doctor_name == doctor_name and s.type == shift_type]
         if existing:
             return False
-        return await self.shifts.add_slot(doctor_name, date_str, shift_type)
+        return await self.shifts.add_slot(doctor_name, self._today(), shift_type)
 
     async def delete_shift_today(self, shift_id: int) -> bool:
         shift = await self.shifts.get_by_id(shift_id)
         if not shift:
             return False
-        if shift.date != self._today_str():
+        if shift.date != self._today():
             return False
         return await self.shifts.delete_by_id(shift_id)

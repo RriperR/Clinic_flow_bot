@@ -1,4 +1,9 @@
+from contextlib import asynccontextmanager
+from datetime import date as date_cls
+
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities import (
     AdminUser as AdminUserEntity,
@@ -26,6 +31,7 @@ from app.domain.repositories import (
     SurveyRepository,
     WorkerRepository,
 )
+from app.domain.shifts.value_objects import format_shift_date, ShiftImportRow
 from app.infrastructure.db.mappers import (
     from_admin_entity,
     from_answer_entity,
@@ -66,6 +72,21 @@ from app.infrastructure.db.models import (
     Survey as SurveyModel,
     Worker as WorkerModel,
 )
+
+
+@asynccontextmanager
+async def _session_scope(external: AsyncSession | None):
+    """Дать сессию для работы репозитория.
+
+    Если сессия пришла извне (из Unit of Work) — отдаём её и не управляем
+    транзакцией: коммит/откат за вызывающим (owns=False). Иначе открываем
+    собственную сессию и владеем её жизненным циклом (owns=True).
+    """
+    if external is not None:
+        yield external, False
+    else:
+        async with async_session() as session:
+            yield session, True
 
 
 class SqlAlchemyAdminRepository(AdminRepository):
@@ -315,96 +336,87 @@ class SqlAlchemyAnswerRepository(AnswerRepository):
 
 
 class SqlAlchemyShiftRepository(ShiftRepository):
-    async def clear_all(self) -> None:
-        async with async_session() as session:
-            await session.execute(delete(ShiftModel))
-            await session.commit()
+    def __init__(self, session: AsyncSession | None = None):
+        # session != None — репозиторий работает внутри Unit of Work на общей
+        # сессии и не коммитит сам. session == None — открывает свою сессию
+        # на каждый вызов (поведение по умолчанию для прямого использования).
+        self._session = session
 
-    async def bulk_insert(self, records: list[tuple[str, str, str, str | None, str | None, str | None]]) -> None:
-        async with async_session() as session:
-            for (
-                doctor_name,
-                date,
-                shift_type,
-                scheduled_assistant_name,
-                speciality,
-                cabinet,
-            ) in records:
+    async def clear_all(self) -> None:
+        async with _session_scope(self._session) as (session, owns):
+            await session.execute(delete(ShiftModel))
+            if owns:
+                await session.commit()
+
+    async def bulk_insert(self, records: list[ShiftImportRow]) -> None:
+        async with _session_scope(self._session) as (session, owns):
+            for row in records:
                 session.add(
                     ShiftModel(
-                        doctor_name=doctor_name,
-                        date=date,
-                        type=shift_type,
-                        scheduled_assistant_name=scheduled_assistant_name,
-                        speciality=speciality,
-                        cabinet=cabinet,
+                        doctor_name=row.doctor_name,
+                        date=format_shift_date(row.date),
+                        type=str(row.type),
+                        scheduled_assistant_name=row.scheduled_assistant_name,
+                        speciality=row.speciality,
+                        cabinet=row.cabinet,
                         manual=False,
                     )
                 )
-            await session.commit()
-
-    async def list_free(self, date: str, shift_type: str) -> list[tuple[int, str]]:
-        async with async_session() as session:
-            result = await session.execute(
-                select(ShiftModel.id, ShiftModel.doctor_name).where(
-                    ShiftModel.date == date,
-                    ShiftModel.type == shift_type,
-                    ShiftModel.assistant_id.is_(None),
-                )
-            )
-            return [(row.id, row.doctor_name) for row in result.all()]
+            if owns:
+                await session.commit()
 
     async def get_by_id(self, shift_id: int) -> ShiftEntity | None:
-        async with async_session() as session:
+        async with _session_scope(self._session) as (session, _):
             shift = await session.get(ShiftModel, shift_id)
             return to_shift_entity(shift)
 
-    async def get_for_assistant(self, assistant_id: int, date: str, shift_type: str) -> ShiftEntity | None:
-        async with async_session() as session:
+    async def get_for_assistant(self, assistant_id: int, date: date_cls, shift_type: str) -> ShiftEntity | None:
+        async with _session_scope(self._session) as (session, _):
             result = await session.execute(
                 select(ShiftModel).where(
                     ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == date,
+                    ShiftModel.date == format_shift_date(date),
                     ShiftModel.type == shift_type,
                 )
             )
             return to_shift_entity(result.scalar_one_or_none())
 
-    async def remove_assistant(self, assistant_id: int, date: str, shift_type: str) -> None:
-        async with async_session() as session:
+    async def remove_assistant(self, assistant_id: int, date: date_cls, shift_type: str) -> None:
+        async with _session_scope(self._session) as (session, owns):
             stmt = (
                 update(ShiftModel)
                 .where(
                     ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == date,
+                    ShiftModel.date == format_shift_date(date),
                     ShiftModel.type == shift_type,
                 )
                 .values(assistant_id=None, assistant_name=None)
             )
             await session.execute(stmt)
-            await session.commit()
+            if owns:
+                await session.commit()
 
     async def add_by_id(self, assistant_id: int, assistant_name: str, shift_id: int) -> bool:
-        async with async_session() as session:
-            shift = await session.get(ShiftModel, shift_id)
-            if not shift or shift.assistant_id is not None:
-                return False
-
-            already_stmt = await session.execute(
-                select(ShiftModel).where(
-                    ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == shift.date,
-                    ShiftModel.type == shift.type,
-                )
+        # Бизнес-правило записи проверяет домен. Здесь — только атомарные
+        # гарантии: условный UPDATE не даёт занять уже занятую смену, а
+        # уникальный индекс (assistant_id, date, type) — записаться дважды
+        # в один слот при гонке запросов.
+        async with _session_scope(self._session) as (session, owns):
+            stmt = (
+                update(ShiftModel)
+                .where(ShiftModel.id == shift_id, ShiftModel.assistant_id.is_(None))
+                .values(assistant_id=assistant_id, assistant_name=assistant_name, manual=False)
             )
-            if already_stmt.scalar_one_or_none():
+            try:
+                result = await session.execute(stmt)
+                if owns:
+                    await session.commit()
+                else:
+                    await session.flush()
+            except IntegrityError:
+                await session.rollback()
                 return False
-
-            shift.assistant_id = assistant_id
-            shift.assistant_name = assistant_name
-            shift.manual = False
-            await session.commit()
-            return True
+            return result.rowcount > 0
 
     async def add_manual(
         self,
@@ -412,37 +424,35 @@ class SqlAlchemyShiftRepository(ShiftRepository):
         assistant_name: str,
         doctor_name: str,
         shift_type: str,
-        date: str,
+        date: date_cls,
     ) -> bool:
-        async with async_session() as session:
-            already = await session.execute(
-                select(ShiftModel).where(
-                    ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == date,
-                    ShiftModel.type == shift_type,
-                )
-            )
-            if already.scalar_one_or_none():
-                return False
-
+        async with _session_scope(self._session) as (session, owns):
             shift = ShiftModel(
                 assistant_id=assistant_id,
                 assistant_name=assistant_name,
                 doctor_name=doctor_name,
                 type=shift_type,
-                date=date,
+                date=format_shift_date(date),
                 manual=True,
             )
             session.add(shift)
-            await session.commit()
+            try:
+                if owns:
+                    await session.commit()
+                else:
+                    await session.flush()
+            except IntegrityError:
+                await session.rollback()
+                return False
             return True
 
-    async def add_slot(self, doctor_name: str, date: str, shift_type: str) -> bool:
-        async with async_session() as session:
+    async def add_slot(self, doctor_name: str, date: date_cls, shift_type: str) -> bool:
+        async with _session_scope(self._session) as (session, owns):
+            stored_date = format_shift_date(date)
             existing = await session.execute(
                 select(ShiftModel.id).where(
                     ShiftModel.doctor_name == doctor_name,
-                    ShiftModel.date == date,
+                    ShiftModel.date == stored_date,
                     ShiftModel.type == shift_type,
                 )
             )
@@ -451,30 +461,32 @@ class SqlAlchemyShiftRepository(ShiftRepository):
 
             shift = ShiftModel(
                 doctor_name=doctor_name,
-                date=date,
+                date=stored_date,
                 type=shift_type,
                 manual=False,
             )
             session.add(shift)
-            await session.commit()
+            if owns:
+                await session.commit()
             return True
 
     async def delete_by_id(self, shift_id: int) -> bool:
-        async with async_session() as session:
+        async with _session_scope(self._session) as (session, owns):
             shift = await session.get(ShiftModel, shift_id)
             if not shift:
                 return False
             await session.delete(shift)
-            await session.commit()
+            if owns:
+                await session.commit()
             return True
 
-    async def list_by_date(self, date: str):
-        async with async_session() as session:
-            result = await session.execute(select(ShiftModel).where(ShiftModel.date == date))
+    async def list_by_date(self, date: date_cls):
+        async with _session_scope(self._session) as (session, _):
+            result = await session.execute(select(ShiftModel).where(ShiftModel.date == format_shift_date(date)))
             return [to_shift_entity(item) for item in result.scalars().all()]
 
     async def list_all(self):
-        async with async_session() as session:
+        async with _session_scope(self._session) as (session, _):
             result = await session.execute(select(ShiftModel))
             return [to_shift_entity(item) for item in result.scalars().all()]
 

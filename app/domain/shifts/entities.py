@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date as date_type
 
 from app.domain.shifts.value_objects import ShiftType
 
@@ -8,7 +9,7 @@ class Shift:
     id: int | None
     assistant_id: int | None
     doctor_name: str
-    date: str
+    date: date_type
     type: ShiftType
     scheduled_assistant_name: str | None = None
     speciality: str | None = None

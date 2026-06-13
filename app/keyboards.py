@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.application.registration.use_case import RegistrationService
+from app.application.shifts.dto import FreeShiftOption
 from app.domain.entities import (
     Cabinet,
     Instrument,
@@ -79,12 +80,12 @@ async def build_int_keyboard(question_index) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def build_shift_keyboard(shifts: list[tuple[int, str]], include_show_all: bool = True) -> InlineKeyboardMarkup:
+def build_shift_keyboard(shifts: list[FreeShiftOption], include_show_all: bool = True) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    for shift_id, name in shifts:
+    for option in shifts:
         builder.button(
-            text=name,
-            callback_data=f"select_shift:{shift_id}",
+            text=option.label,
+            callback_data=f"select_shift:{option.shift_id}",
         )
     if include_show_all:
         builder.button(

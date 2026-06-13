@@ -18,10 +18,18 @@ class ShiftSignupStatus(StrEnum):
 
 
 @dataclass
+class FreeShiftOption:
+    """Свободная смена для выбора в интерфейсе: id смены и подпись кнопки."""
+
+    shift_id: int
+    label: str
+
+
+@dataclass
 class ShiftSignupOffer:
     status: ShiftSignupStatus
     current_shift: Shift | None
-    free_shifts: list[tuple[int, str]]
+    free_shifts: list[FreeShiftOption]
 
 
 @dataclass

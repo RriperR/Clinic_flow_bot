@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date, datetime
 from enum import StrEnum
 
@@ -9,8 +10,28 @@ class ShiftType(StrEnum):
     EVENING = "evening"
 
 
+@dataclass(frozen=True)
+class ShiftImportRow:
+    """Строка графика смен из внешнего источника для массовой загрузки."""
+
+    doctor_name: str
+    date: date
+    type: ShiftType | str
+    scheduled_assistant_name: str | None = None
+    speciality: str | None = None
+    cabinet: str | None = None
+
+
 def format_shift_date(value: date | datetime) -> str:
     return value.strftime(SHIFT_DATE_FORMAT)
+
+
+def parse_shift_date(value: date | str) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return datetime.strptime(value, SHIFT_DATE_FORMAT).date()
 
 
 def parse_shift_type(value: str | ShiftType) -> ShiftType:

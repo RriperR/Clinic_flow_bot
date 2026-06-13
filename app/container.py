@@ -23,6 +23,7 @@ from app.infrastructure.db.repositories import (
     SqlAlchemySurveyRepository,
     SqlAlchemyWorkerRepository,
 )
+from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
 from app.infrastructure.sheets.gateway import SheetsGateway
 from app.presentation.reports.monthly_report_formatter import MonthlyReportTextRenderer
 
@@ -57,7 +58,7 @@ class Container:
             self.survey_repo,
             self.answer_repo,
         )
-        self.shift_service = ShiftService(self.worker_repo, self.shift_repo)
+        self.shift_service = ShiftService(self.worker_repo, self.shift_repo, SqlAlchemyUnitOfWork)
         self.shift_admin = ShiftAdminService(self.worker_repo, self.shift_repo)
         self.instrument_transfer = InstrumentTransferService(
             self.cabinet_repo,

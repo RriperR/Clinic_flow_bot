@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from app.application.admin.ports import AdminSyncGateway
 from app.application.knowledge_base.use_case import KnowledgeBaseService
@@ -11,6 +11,7 @@ from app.domain.repositories import (
     SurveyRepository,
     WorkerRepository,
 )
+from app.domain.shifts.value_objects import format_shift_date, parse_shift_date, ShiftImportRow
 from app.logger import setup_logger
 from app.text_utils import normalize_text
 
@@ -200,12 +201,12 @@ class AdminSyncService:
         self._log_job_event("sync_shifts", "start")
         try:
             rows = self.gateway.read_shifts()
-            schedule: list[tuple[str, str, str, str | None, str | None, str | None]] = []
+            schedule: list[ShiftImportRow] = []
             for row in rows:
                 if len(row) < 7:
                     continue
                 shift_code = row[1].strip()
-                date = row[2].strip()
+                date_str = row[2].strip()
                 doctor_name = row[3].strip()
                 assistant_planned = row[4].strip()
                 speciality = row[5].strip()
@@ -216,18 +217,22 @@ class AdminSyncService:
                     shift_type = "evening"
                 else:
                     continue
-                if not doctor_name or not date:
+                if not doctor_name or not date_str:
+                    continue
+                try:
+                    shift_date = parse_shift_date(date_str)
+                except ValueError:
                     continue
                 if assistant_planned == "-----------":
                     assistant_planned = ""
                 schedule.append(
-                    (
-                        doctor_name,
-                        date,
-                        shift_type,
-                        assistant_planned or None,
-                        speciality or None,
-                        cabinet or None,
+                    ShiftImportRow(
+                        doctor_name=doctor_name,
+                        date=shift_date,
+                        type=shift_type,
+                        scheduled_assistant_name=assistant_planned or None,
+                        speciality=speciality or None,
+                        cabinet=cabinet or None,
                     )
                 )
             if schedule:
@@ -291,12 +296,12 @@ class AdminSyncService:
             self._log_job_event("export_answers", "error", f"{type(exc).__name__}: {exc}")
             raise
 
-    async def export_shifts(self, date_str: str | None = None) -> None:
+    async def export_shifts(self, target_date: date | None = None) -> None:
         self._log_job_event("export_shifts", "start")
         try:
-            if not date_str:
-                date_str = (datetime.now() - timedelta(days=1)).strftime("%d.%m.%Y")
-            shifts = await self.shifts.list_by_date(date_str)
+            if target_date is None:
+                target_date = (datetime.now() - timedelta(days=1)).date()
+            shifts = await self.shifts.list_by_date(target_date)
             headers = [
                 "doctor_name",
                 "scheduled_assistant_name",
@@ -319,7 +324,7 @@ class AdminSyncService:
                         shift.doctor_name,
                         shift.scheduled_assistant_name or "",
                         shift.assistant_name or "",
-                        shift.date,
+                        format_shift_date(shift.date),
                         shift_type,
                         shift.speciality or "",
                         shift.cabinet or "",
@@ -328,7 +333,7 @@ class AdminSyncService:
                     yield ["" if v is None else str(v) for v in row]
 
             self.gateway.export_shifts(headers, serialize())
-            self._log_job_event("export_shifts", "ok", f"rows={len(shifts)} date={date_str}")
+            self._log_job_event("export_shifts", "ok", f"rows={len(shifts)} date={format_shift_date(target_date)}")
         except Exception as exc:
             self._log_job_event("export_shifts", "error", f"{type(exc).__name__}: {exc}")
             raise

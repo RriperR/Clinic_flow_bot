@@ -97,8 +97,7 @@ class ReportsService:
         for shift in all_shifts:
             if shift.assistant_id is None:
                 continue
-            shift_date = self._parse_russian_date(shift.date)
-            if not shift_date or shift_date < one_month_ago:
+            if shift.date < one_month_ago.date():
                 continue
             result[shift.assistant_id][shift.doctor_name] += 1
         return result

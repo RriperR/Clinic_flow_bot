@@ -1,15 +1,26 @@
-from datetime import datetime
+from collections.abc import Callable
+from datetime import date, datetime
 
 from app.application.shifts.dto import (
     DoctorShiftSignup,
+    FreeShiftOption,
     ShiftSignupOffer,
     ShiftSignupSelection,
     ShiftSignupStatus,
 )
+from app.application.shifts.ports import ShiftUnitOfWork
 from app.domain.entities import Worker
 from app.domain.repositories import ShiftRepository, WorkerRepository
-from app.domain.shift_values import format_shift_date, ShiftType
+from app.domain.shift_values import ShiftType
+from app.domain.shifts.scheduling import ShiftSchedule, SignupRejection
 from app.text_utils import normalize_text
+
+_REJECTION_STATUS = {
+    SignupRejection.SHIFT_NOT_FOUND: ShiftSignupStatus.SHIFT_NOT_FOUND,
+    SignupRejection.SHIFT_UNAVAILABLE: ShiftSignupStatus.SHIFT_UNAVAILABLE,
+    SignupRejection.SHIFT_TAKEN: ShiftSignupStatus.SHIFT_TAKEN,
+    SignupRejection.ASSISTANT_ALREADY_ASSIGNED: ShiftSignupStatus.ALREADY_HAS_SHIFT,
+}
 
 
 def detect_shift_type(hour: int, minute: int = 0) -> ShiftType | None:
@@ -22,9 +33,17 @@ def detect_shift_type(hour: int, minute: int = 0) -> ShiftType | None:
 
 
 class ShiftService:
-    def __init__(self, workers: WorkerRepository, shifts: ShiftRepository):
+    def __init__(
+        self,
+        workers: WorkerRepository,
+        shifts: ShiftRepository,
+        uow_factory: Callable[[], ShiftUnitOfWork],
+    ):
         self.workers = workers
+        # self.shifts используется для чистых чтений; запись идёт через UoW,
+        # чтобы загрузка слота и изменение смены жили в одной транзакции.
         self.shifts = shifts
+        self._uow_factory = uow_factory
 
     async def get_worker(self, chat_id: int, include_inactive: bool = False):
         return await self.workers.get_by_chat_id(chat_id, include_inactive=include_inactive)
@@ -35,7 +54,7 @@ class ShiftService:
     async def list_all_doctors(self):
         return await self.workers.list_all()
 
-    async def list_doctor_shifts(self, date: str, shift_type: str, doctor_name: str):
+    async def list_doctor_shifts(self, date: date, shift_type: str, doctor_name: str):
         normalized = normalize_text(doctor_name)
         shifts = [
             shift
@@ -47,7 +66,7 @@ class ShiftService:
 
     async def get_preferred_free_doctor_slot(
         self,
-        date: str,
+        date: date,
         shift_type: str,
         doctor_name: str,
         assistant_name: str | None = None,
@@ -69,11 +88,16 @@ class ShiftService:
         free_slots.sort(key=lambda item: item.id or 0)
         return free_slots[0]
 
-    async def get_current_shift(self, worker_id: int, date: str, shift_type: str):
+    async def get_current_shift(self, worker_id: int, date: date, shift_type: str):
         return await self.shifts.get_for_assistant(worker_id, date, shift_type)
 
-    async def prepare_signup(self, worker: Worker, date: str, shift_type: str) -> ShiftSignupOffer:
-        current_shift = await self.get_current_shift(worker.id, date, shift_type)
+    async def _load_schedule(self, date: date, shift_type: str) -> ShiftSchedule:
+        shifts = await self.shifts.list_by_date(date)
+        return ShiftSchedule(date, shift_type, shifts)
+
+    async def prepare_signup(self, worker: Worker, date: date, shift_type: str) -> ShiftSignupOffer:
+        schedule = await self._load_schedule(date, shift_type)
+        current_shift = schedule.assistant_shift(worker.id)
         if current_shift:
             return ShiftSignupOffer(
                 status=ShiftSignupStatus.CURRENT_SHIFT_EXISTS,
@@ -84,7 +108,9 @@ class ShiftService:
         status = ShiftSignupStatus.READY if free_shifts else ShiftSignupStatus.NO_FREE_SHIFTS
         return ShiftSignupOffer(status=status, current_shift=None, free_shifts=free_shifts)
 
-    async def list_free_shifts(self, date: str, shift_type: str, assistant_name: str | None = None):
+    async def list_free_shifts(
+        self, date: date, shift_type: str, assistant_name: str | None = None
+    ) -> list[FreeShiftOption]:
         shifts = [
             shift
             for shift in await self.shifts.list_by_date(date)
@@ -103,14 +129,14 @@ class ShiftService:
             )
         )
 
-        result: list[tuple[int, str]] = []
+        result: list[FreeShiftOption] = []
         for shift in shifts:
             if shift.id is None:
                 continue
             label = shift.doctor_name
             if preferred and is_preferred(shift):
-                label = f"в­ђ {label}"
-            result.append((shift.id, label))
+                label = f"⭐ {label}"
+            result.append(FreeShiftOption(shift_id=shift.id, label=label))
         return result
 
     async def add_shift_by_id(self, worker_id: int, worker_name: str, shift_id: int) -> bool:
@@ -119,27 +145,30 @@ class ShiftService:
     async def signup_by_shift_id(
         self,
         worker: Worker,
-        date: str,
+        date: date,
         shift_type: str,
         shift_id: int,
     ) -> ShiftSignupSelection:
-        shift = await self.get_shift_by_id(shift_id)
-        if not shift:
-            return ShiftSignupSelection(status=ShiftSignupStatus.SHIFT_NOT_FOUND, shift=None)
-        if shift.date != date or shift.type != shift_type:
-            return ShiftSignupSelection(status=ShiftSignupStatus.SHIFT_UNAVAILABLE, shift=shift)
-        if shift.assistant_id is not None:
-            return ShiftSignupSelection(status=ShiftSignupStatus.SHIFT_TAKEN, shift=shift)
+        # Чтение слота, доменная проверка и запись — в одной транзакции UoW.
+        async with self._uow_factory() as uow:
+            schedule = ShiftSchedule(date, shift_type, await uow.shifts.list_by_date(date))
+            shift = await uow.shifts.get_by_id(shift_id)
+            rejection = schedule.evaluate_signup(shift, worker.id)
+            if rejection:
+                rejected_shift = (
+                    schedule.assistant_shift(worker.id)
+                    if rejection == SignupRejection.ASSISTANT_ALREADY_ASSIGNED
+                    else shift
+                )
+                return ShiftSignupSelection(status=_REJECTION_STATUS[rejection], shift=rejected_shift)
 
-        current_shift = await self.get_current_shift(worker.id, date, shift_type)
-        if current_shift:
-            return ShiftSignupSelection(status=ShiftSignupStatus.ALREADY_HAS_SHIFT, shift=current_shift)
+            success = await uow.shifts.add_by_id(worker.id, worker.full_name, shift_id)
+            if success:
+                await uow.commit()
+            status = ShiftSignupStatus.SIGNED_UP if success else ShiftSignupStatus.SHIFT_TAKEN
+            return ShiftSignupSelection(status=status, shift=shift)
 
-        success = await self.add_shift_by_id(worker.id, worker.full_name, shift_id)
-        status = ShiftSignupStatus.SIGNED_UP if success else ShiftSignupStatus.SHIFT_TAKEN
-        return ShiftSignupSelection(status=status, shift=shift)
-
-    async def remove_shift(self, assistant_id: int, date: str, shift_type: str) -> None:
+    async def remove_shift(self, assistant_id: int, date: date, shift_type: str) -> None:
         await self.shifts.remove_assistant(assistant_id, date, shift_type)
 
     async def add_manual_shift(
@@ -148,7 +177,7 @@ class ShiftService:
         assistant_name: str,
         doctor_name: str,
         shift_type: str,
-        date: str,
+        date: date,
     ) -> bool:
         return await self.shifts.add_manual(assistant_id, assistant_name, doctor_name, shift_type, date)
 
@@ -156,7 +185,7 @@ class ShiftService:
         self,
         worker: Worker,
         doctor_id: int,
-        date: str,
+        date: date,
         shift_type: str,
     ) -> DoctorShiftSignup:
         doctor = await self.get_worker_by_id(doctor_id)
@@ -194,7 +223,7 @@ class ShiftService:
         self,
         worker: Worker,
         doctor_id: int,
-        date: str,
+        date: date,
         shift_type: str,
     ) -> DoctorShiftSignup:
         doctor = await self.get_worker_by_id(doctor_id)
@@ -211,14 +240,21 @@ class ShiftService:
             selection = await self.signup_by_shift_id(worker, date, shift_type, free_slot.id)
             status = selection.status
         else:
-            success = await self.add_manual_shift(
-                worker.id,
-                worker.full_name,
-                doctor.full_name,
-                shift_type,
-                date,
-            )
-            status = ShiftSignupStatus.SIGNED_UP if success else ShiftSignupStatus.ALREADY_HAS_SHIFT
+            async with self._uow_factory() as uow:
+                schedule = ShiftSchedule(date, shift_type, await uow.shifts.list_by_date(date))
+                if schedule.has_assistant(worker.id):
+                    status = ShiftSignupStatus.ALREADY_HAS_SHIFT
+                else:
+                    success = await uow.shifts.add_manual(
+                        worker.id,
+                        worker.full_name,
+                        doctor.full_name,
+                        shift_type,
+                        date,
+                    )
+                    if success:
+                        await uow.commit()
+                    status = ShiftSignupStatus.SIGNED_UP if success else ShiftSignupStatus.ALREADY_HAS_SHIFT
 
         return DoctorShiftSignup(
             status=status,
@@ -229,8 +265,7 @@ class ShiftService:
     async def get_shift_by_id(self, shift_id: int):
         return await self.shifts.get_by_id(shift_id)
 
-    def guess_shift_type_from_now(self) -> tuple[ShiftType | None, str]:
+    def guess_shift_type_from_now(self) -> tuple[ShiftType | None, date]:
         now = datetime.now()
         shift_type = detect_shift_type(now.hour, now.minute)
-        date_str = format_shift_date(now)
-        return shift_type, date_str
+        return shift_type, now.date()
