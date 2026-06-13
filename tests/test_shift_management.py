@@ -79,11 +79,36 @@ class FakeShiftRepository:
         return True
 
 
+class FakeUnitOfWork:
+    """Фейковый UoW: тот же in-memory репозиторий, что и для чтений."""
+
+    def __init__(self, shifts: FakeShiftRepository):
+        self.shifts = shifts
+        self.committed = False
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def commit(self):
+        self.committed = True
+
+    async def rollback(self):
+        pass
+
+
+def build_shift_service(workers: list[Worker], shifts: list[Shift]) -> ShiftService:
+    shift_repo = FakeShiftRepository(shifts)
+    return ShiftService(FakeWorkerRepository(workers), shift_repo, lambda: FakeUnitOfWork(shift_repo))
+
+
 async def test_signup_by_shift_id_reports_unavailable_shift() -> None:
     worker = Worker(id=1, full_name="Assistant")
-    service = ShiftService(
-        FakeWorkerRepository([worker]),
-        FakeShiftRepository([Shift(id=10, assistant_id=None, doctor_name="Doctor", date="02.01.2026", type="morning")]),
+    service = build_shift_service(
+        [worker],
+        [Shift(id=10, assistant_id=None, doctor_name="Doctor", date="02.01.2026", type="morning")],
     )
 
     result = await service.signup_by_shift_id(worker, "01.01.2026", "morning", 10)
@@ -92,12 +117,25 @@ async def test_signup_by_shift_id_reports_unavailable_shift() -> None:
     assert not result.success
 
 
+async def test_signup_by_shift_id_assigns_free_shift() -> None:
+    worker = Worker(id=1, full_name="Assistant")
+    service = build_shift_service(
+        [worker],
+        [Shift(id=10, assistant_id=None, doctor_name="Doctor", date="01.01.2026", type="morning")],
+    )
+
+    result = await service.signup_by_shift_id(worker, "01.01.2026", "morning", 10)
+
+    assert result.status == ShiftSignupStatus.SIGNED_UP
+    assert result.success
+
+
 async def test_signup_to_doctor_reports_manual_confirmation_when_slots_are_taken() -> None:
     worker = Worker(id=1, full_name="Assistant")
     doctor = Worker(id=2, full_name="Doctor")
-    service = ShiftService(
-        FakeWorkerRepository([worker, doctor]),
-        FakeShiftRepository([Shift(id=10, assistant_id=3, doctor_name="Doctor", date="01.01.2026", type="morning")]),
+    service = build_shift_service(
+        [worker, doctor],
+        [Shift(id=10, assistant_id=3, doctor_name="Doctor", date="01.01.2026", type="morning")],
     )
 
     result = await service.signup_to_doctor(worker, doctor.id, "01.01.2026", "morning")
