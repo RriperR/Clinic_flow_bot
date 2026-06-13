@@ -1,7 +1,9 @@
+from datetime import date
+
 from app.domain.entities import Shift
 from app.domain.shifts.scheduling import ShiftSchedule, SignupRejection
 
-DATE = "02.01.2026"
+DATE = date(2026, 1, 2)
 
 
 def _free_shift(shift_id: int, doctor: str = "Doctor") -> Shift:
@@ -13,7 +15,7 @@ def _taken_shift(shift_id: int, assistant_id: int, doctor: str = "Doctor") -> Sh
 
 
 def test_schedule_keeps_only_shifts_of_the_slot() -> None:
-    other_day = Shift(id=2, assistant_id=None, doctor_name="Doctor", date="03.01.2026", type="morning")
+    other_day = Shift(id=2, assistant_id=None, doctor_name="Doctor", date=date(2026, 1, 3), type="morning")
     other_type = Shift(id=3, assistant_id=None, doctor_name="Doctor", date=DATE, type="evening")
     schedule = ShiftSchedule(DATE, "morning", [_free_shift(1), other_day, other_type])
 

@@ -6,7 +6,6 @@ from aiogram.types import CallbackQuery, Message
 
 from app.application.reports.worker_report_use_case import WorkerReportService
 from app.application.shifts.use_case import ShiftService
-from app.domain.shift_values import format_shift_date
 from app.keyboards import (
     build_all_doctors_keyboard,
     build_cancel_shift_keyboard,
@@ -133,11 +132,10 @@ def create_shift_router(
     @router.callback_query(F.data.startswith("cancel_shift:"))
     async def cancel_shift(callback: CallbackQuery):
         shift_type = callback.data.split(":", 1)[1]
-        now = datetime.now()
-        date_str = format_shift_date(now)
+        today = datetime.now().date()
         worker = await shift_service.get_worker(callback.from_user.id)
         if worker:
-            await shift_service.remove_shift(worker.id, date_str, shift_type)
+            await shift_service.remove_shift(worker.id, today, shift_type)
             await callback.message.edit_text("Смена отменена")
         await callback.answer()
 

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import date as date_cls
 
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -30,7 +31,7 @@ from app.domain.repositories import (
     SurveyRepository,
     WorkerRepository,
 )
-from app.domain.shifts.value_objects import ShiftImportRow
+from app.domain.shifts.value_objects import format_shift_date, ShiftImportRow
 from app.infrastructure.db.mappers import (
     from_admin_entity,
     from_answer_entity,
@@ -353,7 +354,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 session.add(
                     ShiftModel(
                         doctor_name=row.doctor_name,
-                        date=row.date,
+                        date=format_shift_date(row.date),
                         type=str(row.type),
                         scheduled_assistant_name=row.scheduled_assistant_name,
                         speciality=row.speciality,
@@ -369,24 +370,24 @@ class SqlAlchemyShiftRepository(ShiftRepository):
             shift = await session.get(ShiftModel, shift_id)
             return to_shift_entity(shift)
 
-    async def get_for_assistant(self, assistant_id: int, date: str, shift_type: str) -> ShiftEntity | None:
+    async def get_for_assistant(self, assistant_id: int, date: date_cls, shift_type: str) -> ShiftEntity | None:
         async with _session_scope(self._session) as (session, _):
             result = await session.execute(
                 select(ShiftModel).where(
                     ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == date,
+                    ShiftModel.date == format_shift_date(date),
                     ShiftModel.type == shift_type,
                 )
             )
             return to_shift_entity(result.scalar_one_or_none())
 
-    async def remove_assistant(self, assistant_id: int, date: str, shift_type: str) -> None:
+    async def remove_assistant(self, assistant_id: int, date: date_cls, shift_type: str) -> None:
         async with _session_scope(self._session) as (session, owns):
             stmt = (
                 update(ShiftModel)
                 .where(
                     ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == date,
+                    ShiftModel.date == format_shift_date(date),
                     ShiftModel.type == shift_type,
                 )
                 .values(assistant_id=None, assistant_name=None)
@@ -423,7 +424,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
         assistant_name: str,
         doctor_name: str,
         shift_type: str,
-        date: str,
+        date: date_cls,
     ) -> bool:
         async with _session_scope(self._session) as (session, owns):
             shift = ShiftModel(
@@ -431,7 +432,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 assistant_name=assistant_name,
                 doctor_name=doctor_name,
                 type=shift_type,
-                date=date,
+                date=format_shift_date(date),
                 manual=True,
             )
             session.add(shift)
@@ -445,12 +446,13 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 return False
             return True
 
-    async def add_slot(self, doctor_name: str, date: str, shift_type: str) -> bool:
+    async def add_slot(self, doctor_name: str, date: date_cls, shift_type: str) -> bool:
         async with _session_scope(self._session) as (session, owns):
+            stored_date = format_shift_date(date)
             existing = await session.execute(
                 select(ShiftModel.id).where(
                     ShiftModel.doctor_name == doctor_name,
-                    ShiftModel.date == date,
+                    ShiftModel.date == stored_date,
                     ShiftModel.type == shift_type,
                 )
             )
@@ -459,7 +461,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
 
             shift = ShiftModel(
                 doctor_name=doctor_name,
-                date=date,
+                date=stored_date,
                 type=shift_type,
                 manual=False,
             )
@@ -478,9 +480,9 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 await session.commit()
             return True
 
-    async def list_by_date(self, date: str):
+    async def list_by_date(self, date: date_cls):
         async with _session_scope(self._session) as (session, _):
-            result = await session.execute(select(ShiftModel).where(ShiftModel.date == date))
+            result = await session.execute(select(ShiftModel).where(ShiftModel.date == format_shift_date(date)))
             return [to_shift_entity(item) for item in result.scalars().all()]
 
     async def list_all(self):

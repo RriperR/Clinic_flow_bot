@@ -1,8 +1,9 @@
 from collections.abc import Sequence
+from datetime import date
 from enum import StrEnum
 
 from app.domain.shifts.entities import Shift
-from app.domain.shifts.value_objects import parse_shift_type, ShiftType
+from app.domain.shifts.value_objects import parse_shift_date, parse_shift_type, ShiftType
 
 
 class SignupRejection(StrEnum):
@@ -22,13 +23,13 @@ class ShiftSchedule:
     поэтому его можно проверить и протестировать в отрыве от хранилища.
     """
 
-    def __init__(self, date: str, shift_type: ShiftType | str, shifts: Sequence[Shift]):
-        self.date = date
+    def __init__(self, date: date | str, shift_type: ShiftType | str, shifts: Sequence[Shift]):
+        self.date = parse_shift_date(date)
         self.shift_type = parse_shift_type(shift_type)
         self._shifts = [shift for shift in shifts if self._belongs(shift)]
 
     def _belongs(self, shift: Shift) -> bool:
-        return shift.date == self.date and parse_shift_type(shift.type) == self.shift_type
+        return parse_shift_date(shift.date) == self.date and parse_shift_type(shift.type) == self.shift_type
 
     def assistant_shift(self, assistant_id: int) -> Shift | None:
         """Смена слота, на которой уже стоит ассистент, либо None."""

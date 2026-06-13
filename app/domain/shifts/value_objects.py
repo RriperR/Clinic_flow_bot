@@ -15,7 +15,7 @@ class ShiftImportRow:
     """Строка графика смен из внешнего источника для массовой загрузки."""
 
     doctor_name: str
-    date: str
+    date: date
     type: ShiftType | str
     scheduled_assistant_name: str | None = None
     speciality: str | None = None
@@ -24,6 +24,14 @@ class ShiftImportRow:
 
 def format_shift_date(value: date | datetime) -> str:
     return value.strftime(SHIFT_DATE_FORMAT)
+
+
+def parse_shift_date(value: date | str) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return datetime.strptime(value, SHIFT_DATE_FORMAT).date()
 
 
 def parse_shift_type(value: str | ShiftType) -> ShiftType:
