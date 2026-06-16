@@ -9,6 +9,7 @@ from app.container import build_container
 from app.error_handlers import GlobalErrorHandler
 from app.handlers.admin_handlers import create_admin_router
 from app.handlers.admin_panel_handlers import create_admin_panel_router
+from app.handlers.agent_handlers import create_agent_router
 from app.handlers.instrument_transfer_handlers import create_instrument_transfer_router
 from app.handlers.knowledge_handlers import create_knowledge_router
 from app.handlers.moves_handlers import create_moves_router
@@ -49,6 +50,7 @@ async def main():
             BotCommand(command="report", description="посмотреть отчёт"),
             BotCommand(command="move_instrument", description="перенести инструмент"),
             BotCommand(command="moves", description="история перемещений"),
+            BotCommand(command="ask", description="спросить ассистента"),
         ]
     )
 
@@ -64,6 +66,7 @@ async def main():
     dp.include_router(create_instrument_transfer_router(container.instrument_transfer))
     dp.include_router(create_admin_panel_router(container.instrument_admin, container.admin_access))
     dp.include_router(create_knowledge_router(container.knowledge_base))
+    dp.include_router(create_agent_router(container.agent))
 
     scheduler = AsyncIOScheduler()
     # scheduler.add_job(container.admin_sync.sync_pairs, "cron", hour=19, minute=50)

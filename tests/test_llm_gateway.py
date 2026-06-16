@@ -1,6 +1,4 @@
-from collections.abc import Sequence
-
-from app.application.llm.ports import LlmClient, LlmMessage, LlmRole
+from app.application.llm.ports import LlmCompletion, LlmMessage, LlmRole, ToolCall, ToolSpec
 from app.config import LlmSettings
 from app.infrastructure.llm.gateway import OpenAICompatibleLlmClient
 
@@ -15,47 +13,77 @@ def _settings(model: str = "default-model", max_tokens: int = 256) -> LlmSetting
     )
 
 
-def test_payload_uses_defaults_from_settings() -> None:
+def _payload(client: OpenAICompatibleLlmClient, messages, **kwargs):
+    defaults = dict(system=None, tools=None, tool_choice=None, model=None, max_tokens=None, temperature=None)
+    defaults.update(kwargs)
+    return client._build_payload(messages, **defaults)
+
+
+def test_payload_uses_defaults_and_prepends_system() -> None:
     client = OpenAICompatibleLlmClient(_settings())
-    payload = client._build_payload(
-        [LlmMessage(role=LlmRole.USER, content="hi")],
-        model=None,
-        max_tokens=None,
-        temperature=None,
-    )
-    assert payload == {
-        "model": "default-model",
-        "messages": [{"role": "user", "content": "hi"}],
-        "max_tokens": 256,
+    payload = _payload(client, [LlmMessage(role=LlmRole.USER, content="hi")], system="be brief")
+    assert payload["model"] == "default-model"
+    assert payload["max_tokens"] == 256
+    assert payload["messages"] == [
+        {"role": "system", "content": "be brief"},
+        {"role": "user", "content": "hi"},
+    ]
+    assert "tools" not in payload
+
+
+def test_payload_serializes_tools_and_tool_messages() -> None:
+    client = OpenAICompatibleLlmClient(_settings())
+    tool = ToolSpec(name="lookup", description="d", parameters={"type": "object", "properties": {}})
+    messages = [
+        LlmMessage(
+            role=LlmRole.ASSISTANT,
+            content="",
+            tool_calls=(ToolCall(id="c1", name="lookup", arguments={"q": "x"}),),
+        ),
+        LlmMessage(role=LlmRole.TOOL, content="result", tool_call_id="c1"),
+    ]
+    payload = _payload(client, messages, tools=[tool], tool_choice="auto")
+
+    assert payload["tools"][0]["type"] == "function"
+    assert payload["tools"][0]["function"]["name"] == "lookup"
+    assert payload["tool_choice"] == "auto"
+
+    assistant = payload["messages"][0]
+    assert assistant["tool_calls"][0]["function"]["name"] == "lookup"
+    assert assistant["tool_calls"][0]["function"]["arguments"] == '{"q": "x"}'
+    assert payload["messages"][1] == {"role": "tool", "tool_call_id": "c1", "content": "result"}
+
+
+def test_parse_text_response() -> None:
+    data = {"choices": [{"message": {"content": "hello"}, "finish_reason": "stop"}]}
+    completion = OpenAICompatibleLlmClient._parse_response(data)
+    assert completion.text == "hello"
+    assert completion.tool_calls == ()
+    assert completion.finish_reason == "stop"
+
+
+def test_parse_tool_call_response() -> None:
+    data = {
+        "choices": [
+            {
+                "message": {
+                    "content": None,
+                    "tool_calls": [{"id": "c1", "function": {"name": "lookup", "arguments": '{"q": "x"}'}}],
+                },
+                "finish_reason": "tool_calls",
+            }
+        ]
     }
-
-
-def test_payload_overrides_and_temperature() -> None:
-    client = OpenAICompatibleLlmClient(_settings())
-    payload = client._build_payload(
-        [
-            LlmMessage(role=LlmRole.SYSTEM, content="sys"),
-            LlmMessage(role=LlmRole.USER, content="q"),
-        ],
-        model="other-model",
-        max_tokens=10,
-        temperature=0.2,
-    )
-    assert payload["model"] == "other-model"
-    assert payload["max_tokens"] == 10
-    assert payload["temperature"] == 0.2
-    assert [m["role"] for m in payload["messages"]] == ["system", "user"]
+    completion = OpenAICompatibleLlmClient._parse_response(data)
+    assert completion.text is None
+    assert completion.tool_calls == (ToolCall(id="c1", name="lookup", arguments={"q": "x"}),)
 
 
 async def test_fake_client_satisfies_port() -> None:
     class FakeLlmClient:
-        def __init__(self) -> None:
-            self.calls: list[Sequence[LlmMessage]] = []
+        async def complete(self, messages, **kwargs) -> LlmCompletion:
+            return LlmCompletion(text="stub answer")
 
-        async def complete(self, messages, *, model=None, max_tokens=None, temperature=None) -> str:
-            self.calls.append(list(messages))
-            return "stub answer"
-
-    client: LlmClient = FakeLlmClient()
+    client = FakeLlmClient()
     answer = await client.complete([LlmMessage(role=LlmRole.USER, content="hello")])
-    assert answer == "stub answer"
+    assert answer.text == "stub answer"

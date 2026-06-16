@@ -1,5 +1,8 @@
 from app.application.admin.access_use_case import AdminAccessService
 from app.application.admin.sync_use_case import AdminSyncService
+from app.application.agent.catalog import build_tool_registry
+from app.application.agent.prompts import AGENT_SYSTEM_PROMPT
+from app.application.agent.use_case import AgentService
 from app.application.instruments.admin_use_case import InstrumentAdminService
 from app.application.instruments.transfer_use_case import InstrumentTransferService
 from app.application.knowledge_base.use_case import KnowledgeBaseService
@@ -99,6 +102,14 @@ class Container:
             MonthlyReportTextRenderer(),
         )
         self.scheduler = SurveyScheduler(self.survey_flow)
+
+        # Агент: ручной цикл tool-use поверх LLM-порта; тулы — read-only обёртки
+        # над существующими use case. Логику ответов наращиваем сверху.
+        self.agent = AgentService(
+            self.llm,
+            build_tool_registry(self.knowledge_base, self.shift_service),
+            AGENT_SYSTEM_PROMPT,
+        )
 
 
 def build_container() -> Container:
