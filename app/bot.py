@@ -4,7 +4,6 @@ from aiogram import Bot, Dispatcher
 from aiogram.enums import ChatType
 from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from dotenv import load_dotenv
 
 from app.container import build_container
 from app.error_handlers import GlobalErrorHandler
@@ -24,7 +23,6 @@ from app.logging_middleware import UserActionLoggingMiddleware
 
 
 async def main():
-    load_dotenv()
     container = build_container()
     settings = container.settings
 

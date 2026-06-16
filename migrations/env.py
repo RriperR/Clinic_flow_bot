@@ -1,11 +1,9 @@
 import asyncio
-import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from dotenv import load_dotenv
-from sqlalchemy import pool, URL
+from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -14,23 +12,15 @@ from alembic import context
 # Проект должен быть импортируемым (alembic запускается из корня репозитория).
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.config import DbSettings  # noqa: E402
 from app.infrastructure.db.models import Base  # noqa: E402
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-# URL берём из тех же переменных окружения, что и приложение, а не из ini.
-load_dotenv()
-db_url = URL.create(
-    "postgresql+asyncpg",
-    username=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST", "localhost"),
-    port=os.getenv("DB_PORT", "5432"),
-    database=os.getenv("DB_NAME"),
-)
-config.set_main_option("sqlalchemy.url", db_url.render_as_string(hide_password=False))
+# URL берём из тех же настроек, что и приложение (pydantic-settings).
+config.set_main_option("sqlalchemy.url", DbSettings().url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

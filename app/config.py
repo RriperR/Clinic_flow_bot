@@ -1,107 +1,89 @@
-import os
-from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BASE_DIR = Path(__file__).resolve().parent.parent
+_ENV_FILE = _BASE_DIR / ".env"
+
+# Приоритет источников (pydantic-settings): переменные окружения процесса >
+# значения из .env > дефолты полей. Так shell-переменные перекрывают .env.
+_BASE_CONFIG = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
 
-@dataclass
-class BotSettings:
-    token: str
-    report_chat_id: str | None
-    admin_chat_ids: list[str]
+class BotSettings(BaseSettings):
+    model_config = _BASE_CONFIG
+
+    token: str = Field("", validation_alias="BOT_TOKEN")
+    report_chat_id: str | None = Field(None, validation_alias="REPORT_CHAT_ID")
+    # Список читаем как сырую строку и парсим в property: иначе pydantic-settings
+    # пытается распарсить значение env как JSON.
+    admin_chat_ids_raw: str = Field("", validation_alias="ADMIN_CHAT_IDS")
+
+    @property
+    def admin_chat_ids(self) -> list[str]:
+        return [item.strip() for item in self.admin_chat_ids_raw.replace(";", ",").split(",") if item.strip()]
 
 
-@dataclass
-class DbSettings:
-    host: str
-    port: str
-    name: str
-    user: str
-    password: str
+class DbSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", env_prefix="DB_", extra="ignore")
+
+    host: str = "localhost"
+    port: int = 5432
+    name: str = ""
+    user: str = ""
+    password: str = ""
+
+    @property
+    def url(self) -> str:
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
 
 
-@dataclass
-class SheetsSettings:
-    credentials_path: Path
-    workers_sheet: str
-    pairs_sheet: str
-    surveys_sheet: str
-    shifts_source_sheet: str
-    shift_report_sheet: str
-    answers_sheet: str
-    main_table: str
-    knowledge_table: str
+class SheetsSettings(BaseSettings):
+    model_config = _BASE_CONFIG
+
+    workers_sheet: str = Field("Список сотрудников", validation_alias="WORKERS_SHEET_NAME")
+    pairs_sheet: str = Field("Пары сотрудников", validation_alias="PAIRS_SHEET_NAME")
+    surveys_sheet: str = Field("Опросы", validation_alias="SURVEYS_SHEET_NAME")
+    shifts_source_sheet: str = Field("Расписание смен", validation_alias="SHIFTS_SOURCE_SHEET_NAME")
+    shift_report_sheet: str = Field("Отчёт по сменам", validation_alias="SHIFT_REPORT_SHEET_NAME")
+    answers_sheet: str = Field("Ответы", validation_alias="ANSWERS_SHEET_NAME")
+    main_table: str = Field("", validation_alias="TABLE")
+    knowledge_table: str = Field("", validation_alias="KNOWLEDGE_TABLE")
+    credentials_path: Path = _BASE_DIR / "q-bot-key2.json"
+
+    @field_validator("main_table", "knowledge_table")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        return value.strip()
 
 
-@dataclass
-class LlmSettings:
-    # Провайдер-агностичные настройки. base_url задаёт провайдера (любой
-    # OpenAI-совместимый эндпоинт: OpenAI, OpenRouter, локальный сервер,
-    # совместимый режим Anthropic и т.п.), model — модель по умолчанию.
-    api_key: str
-    base_url: str
-    model: str
-    max_tokens: int
-    timeout: float
+class LlmSettings(BaseSettings):
+    # Провайдер-агностично: base_url выбирает провайдера (любой OpenAI-совместимый
+    # эндпоинт), model — модель по умолчанию.
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", env_prefix="LLM_", extra="ignore")
+
+    api_key: str = ""
+    base_url: str = ""
+    model: str = ""
+    max_tokens: int = 1024
+    timeout: float = 30
+
+    @field_validator("base_url")
+    @classmethod
+    def _strip_slash(cls, value: str) -> str:
+        return value.rstrip("/")
 
 
-@dataclass
-class Settings:
-    bot: BotSettings
-    db: DbSettings
-    sheets: SheetsSettings
-    llm: LlmSettings
-    log_dir: Path
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore")
+
+    bot: BotSettings = Field(default_factory=BotSettings)
+    db: DbSettings = Field(default_factory=DbSettings)
+    sheets: SheetsSettings = Field(default_factory=SheetsSettings)
+    llm: LlmSettings = Field(default_factory=LlmSettings)
+    log_dir: Path = _BASE_DIR / "logs"
 
 
 def load_settings() -> Settings:
-    load_dotenv()
-
-    base_dir = Path(__file__).resolve().parent.parent
-    log_dir = (base_dir / "logs").resolve()
-    credentials_path = (base_dir / "q-bot-key2.json").resolve()
-
-    sheets = SheetsSettings(
-        credentials_path=credentials_path,
-        workers_sheet=os.getenv("WORKERS_SHEET_NAME", "Список сотрудников"),
-        pairs_sheet=os.getenv("PAIRS_SHEET_NAME", "Пары сотрудников"),
-        surveys_sheet=os.getenv("SURVEYS_SHEET_NAME", "Опросы"),
-        shifts_source_sheet=os.getenv("SHIFTS_SOURCE_SHEET_NAME", "Расписание смен"),
-        shift_report_sheet=os.getenv("SHIFT_REPORT_SHEET_NAME", "Отчёт по сменам"),
-        answers_sheet=os.getenv("ANSWERS_SHEET_NAME", "Ответы"),
-        main_table=os.getenv("TABLE", "").strip(),
-        knowledge_table=os.getenv("KNOWLEDGE_TABLE", "").strip(),
-    )
-
-    db = DbSettings(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=os.getenv("DB_PORT", "5432"),
-        name=os.getenv("DB_NAME", ""),
-        user=os.getenv("DB_USER", ""),
-        password=os.getenv("DB_PASSWORD", ""),
-    )
-
-    bot = BotSettings(
-        token=os.getenv("BOT_TOKEN", ""),
-        report_chat_id=os.getenv("REPORT_CHAT_ID"),
-        admin_chat_ids=[
-            item.strip() for item in os.getenv("ADMIN_CHAT_IDS", "").replace(";", ",").split(",") if item.strip()
-        ],
-    )
-
-    llm = LlmSettings(
-        api_key=os.getenv("LLM_API_KEY", ""),
-        base_url=os.getenv("LLM_BASE_URL", "").rstrip("/"),
-        model=os.getenv("LLM_MODEL", ""),
-        max_tokens=int(os.getenv("LLM_MAX_TOKENS", "1024")),
-        timeout=float(os.getenv("LLM_TIMEOUT", "30")),
-    )
-
-    return Settings(
-        bot=bot,
-        db=db,
-        sheets=sheets,
-        llm=llm,
-        log_dir=log_dir,
-    )
+    return Settings()

@@ -3,6 +3,7 @@ aiohttp
 SQLAlchemy[asyncio]
 alembic
 asyncpg
+pydantic-settings
 python-dotenv~=1.0.1
 apscheduler
 mcp~=1.26.0
