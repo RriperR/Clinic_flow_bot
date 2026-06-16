@@ -1,20 +1,21 @@
 from dataclasses import dataclass
+from datetime import date, datetime
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Pair:
-    id: int | None
+    id: int | None = None
     subject: str
     object: str
     survey: str
     weekday: str
-    date: str
+    date: date
     status: str = "ready"
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Survey:
-    id: int | None
+    id: int | None = None
     speciality: str
     question1: str
     question1_type: str
@@ -28,14 +29,14 @@ class Survey:
     question5_type: str
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Answer:
-    id: int | None
+    id: int | None = None
     subject: str
     object: str
     survey: str
-    survey_date: str
-    completed_at: str
+    survey_date: date
+    completed_at: datetime
     question1: str
     answer1: str
     question2: str

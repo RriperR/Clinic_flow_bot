@@ -1,26 +1,26 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(kw_only=True)
 class KnowledgeSection:
-    id: int | None
+    id: int | None = None
     title: str
     position: int
     is_active: bool = True
 
 
-@dataclass
+@dataclass(kw_only=True)
 class KnowledgeManipulation:
-    id: int | None
+    id: int | None = None
     section_id: int
     title: str
     position: int
     is_active: bool = True
 
 
-@dataclass
+@dataclass(kw_only=True)
 class KnowledgeItem:
-    id: int | None
+    id: int | None = None
     manipulation_id: int
     title: str | None
     item_number: str | None

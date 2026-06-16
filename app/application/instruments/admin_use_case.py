@@ -24,7 +24,7 @@ class InstrumentAdminService:
         return await self.cabinets.get_by_id(cabinet_id)
 
     async def add_cabinet(self, name: str) -> None:
-        cabinet = Cabinet(id=None, name=name, is_active=True)
+        cabinet = Cabinet(name=name, is_active=True)
         await self.cabinets.add(cabinet)
 
     async def rename_cabinet(self, cabinet_id: int, name: str) -> bool:
@@ -46,7 +46,7 @@ class InstrumentAdminService:
         return await self.instruments.get_by_id(instrument_id)
 
     async def add_instrument(self, cabinet_id: int, name: str) -> None:
-        instrument = Instrument(id=None, name=name, cabinet_id=cabinet_id, is_active=True)
+        instrument = Instrument(name=name, cabinet_id=cabinet_id, is_active=True)
         await self.instruments.add(instrument)
 
     async def rename_instrument(self, instrument_id: int, name: str) -> bool:

@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 
-@dataclass
+@dataclass(kw_only=True)
 class AdminUser:
-    id: int | None
+    id: int | None = None
     chat_id: str
-    added_at: str | None = None
+    added_at: datetime | None = None

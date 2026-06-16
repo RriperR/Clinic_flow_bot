@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Worker:
-    id: int | None
+    id: int | None = None
     full_name: str
     file_id: str | None = None
     chat_id: str | None = None

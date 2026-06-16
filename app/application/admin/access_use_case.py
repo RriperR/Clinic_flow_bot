@@ -35,9 +35,8 @@ class AdminAccessService:
 
     async def add_admin(self, chat_id: str) -> bool:
         admin = AdminUser(
-            id=None,
             chat_id=chat_id,
-            added_at=datetime.now().isoformat(timespec="seconds"),
+            added_at=datetime.now(),
         )
         return await self.admins.add(admin)
 

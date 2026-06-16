@@ -110,7 +110,6 @@ class AdminSyncService:
                     continue
 
                 new_worker = Worker(
-                    id=None,
                     full_name=full_name,
                     file_id=file_id,
                     chat_id=chat_id,
@@ -140,22 +139,28 @@ class AdminSyncService:
             self._log_job_event("sync_workers", "error", f"{type(exc).__name__}: {exc}")
             raise
 
-    async def sync_pairs(self, today_str: str | None = None) -> int:
+    async def sync_pairs(self, today: date | None = None) -> int:
         self._log_job_event("sync_pairs", "start")
         try:
-            if not today_str:
-                today_str = datetime.now().strftime("%d.%m.%Y")
+            if today is None:
+                today = datetime.now().date()
             rows = self.gateway.read_pairs()
             created = 0
             for row in rows:
-                if len(row) < 5 or row[4].strip() != today_str:
+                if len(row) < 5:
+                    continue
+                try:
+                    row_date = parse_shift_date(row[4].strip())
+                except ValueError:
+                    continue
+                if row_date != today:
                     continue
                 pair = Pair(
                     subject=row[0].strip(),
                     object=row[1].strip(),
                     survey=row[2].strip(),
                     weekday=row[3].strip(),
-                    date=row[4].strip(),
+                    date=row_date,
                 )
                 await self.pairs.add(pair)
                 created += 1

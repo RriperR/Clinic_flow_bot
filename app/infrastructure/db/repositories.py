@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import date as date_cls
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +31,7 @@ from app.domain.repositories import (
     SurveyRepository,
     WorkerRepository,
 )
-from app.domain.shifts.value_objects import format_shift_date, ShiftImportRow
+from app.domain.shifts.value_objects import ShiftImportRow
 from app.infrastructure.db.mappers import (
     from_admin_entity,
     from_answer_entity,
@@ -279,11 +279,22 @@ class SqlAlchemySurveyRepository(SurveyRepository):
     async def add(self, survey: SurveyEntity) -> None:
         async with async_session() as session:
             session.add(from_survey_entity(survey))
+            if survey.id is not None:
+                await session.flush()
+                await session.execute(
+                    text(
+                        "SELECT setval("
+                        "pg_get_serial_sequence('surveys', 'id'), "
+                        "GREATEST((SELECT COALESCE(MAX(id), 1) FROM surveys), 1), "
+                        "true"
+                        ")"
+                    )
+                )
             await session.commit()
 
 
 class SqlAlchemyPairRepository(PairRepository):
-    async def list_ready_by_date(self, date: str):
+    async def list_ready_by_date(self, date: date_cls):
         async with async_session() as session:
             stmt = select(PairModel).where(PairModel.status == "ready", PairModel.date <= date).order_by(PairModel.id)
             result = await session.execute(stmt)
@@ -349,12 +360,42 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 await session.commit()
 
     async def bulk_insert(self, records: list[ShiftImportRow]) -> None:
+        # Идемпотентность: повторный импорт того же расписания не плодит дубли.
+        # Идентичность планового слота — кортеж его полей. Существующие ключи
+        # грузим одним запросом по затронутым датам и сравниваем в Python, где
+        # None == None (SQL `= NULL` для этого не годится), заодно отсекая
+        # дубли внутри самого батча.
+        if not records:
+            return
         async with _session_scope(self._session) as (session, owns):
+            dates = {row.date for row in records}
+            existing_rows = await session.execute(
+                select(
+                    ShiftModel.doctor_name,
+                    ShiftModel.date,
+                    ShiftModel.type,
+                    ShiftModel.scheduled_assistant_name,
+                    ShiftModel.speciality,
+                    ShiftModel.cabinet,
+                ).where(ShiftModel.manual.is_(False), ShiftModel.date.in_(dates))
+            )
+            seen = {tuple(row) for row in existing_rows.all()}
             for row in records:
+                key = (
+                    row.doctor_name,
+                    row.date,
+                    str(row.type),
+                    row.scheduled_assistant_name,
+                    row.speciality,
+                    row.cabinet,
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
                 session.add(
                     ShiftModel(
                         doctor_name=row.doctor_name,
-                        date=format_shift_date(row.date),
+                        date=row.date,
                         type=str(row.type),
                         scheduled_assistant_name=row.scheduled_assistant_name,
                         speciality=row.speciality,
@@ -375,7 +416,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
             result = await session.execute(
                 select(ShiftModel).where(
                     ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == format_shift_date(date),
+                    ShiftModel.date == date,
                     ShiftModel.type == shift_type,
                 )
             )
@@ -387,7 +428,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 update(ShiftModel)
                 .where(
                     ShiftModel.assistant_id == assistant_id,
-                    ShiftModel.date == format_shift_date(date),
+                    ShiftModel.date == date,
                     ShiftModel.type == shift_type,
                 )
                 .values(assistant_id=None, assistant_name=None)
@@ -432,7 +473,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
                 assistant_name=assistant_name,
                 doctor_name=doctor_name,
                 type=shift_type,
-                date=format_shift_date(date),
+                date=date,
                 manual=True,
             )
             session.add(shift)
@@ -448,11 +489,10 @@ class SqlAlchemyShiftRepository(ShiftRepository):
 
     async def add_slot(self, doctor_name: str, date: date_cls, shift_type: str) -> bool:
         async with _session_scope(self._session) as (session, owns):
-            stored_date = format_shift_date(date)
             existing = await session.execute(
                 select(ShiftModel.id).where(
                     ShiftModel.doctor_name == doctor_name,
-                    ShiftModel.date == stored_date,
+                    ShiftModel.date == date,
                     ShiftModel.type == shift_type,
                 )
             )
@@ -461,7 +501,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
 
             shift = ShiftModel(
                 doctor_name=doctor_name,
-                date=stored_date,
+                date=date,
                 type=shift_type,
                 manual=False,
             )
@@ -482,7 +522,7 @@ class SqlAlchemyShiftRepository(ShiftRepository):
 
     async def list_by_date(self, date: date_cls):
         async with _session_scope(self._session) as (session, _):
-            result = await session.execute(select(ShiftModel).where(ShiftModel.date == format_shift_date(date)))
+            result = await session.execute(select(ShiftModel).where(ShiftModel.date == date))
             return [to_shift_entity(item) for item in result.scalars().all()]
 
     async def list_all(self):

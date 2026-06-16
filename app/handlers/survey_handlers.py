@@ -27,7 +27,10 @@ async def start_pair_survey(
     dp: Dispatcher | None = None,
     file_id: str | None = None,
 ) -> None:
-    intro = f"{pair.date} с вами работает: {pair.object}.\nПожалуйста, оцените коллегу: {pair.survey}"
+    intro = (
+        f"{pair.date.strftime('%d.%m.%Y')} с вами работает: {pair.object}.\n"
+        f"Пожалуйста, оцените коллегу: {pair.survey}"
+    )
     if file_id:
         await bot.send_photo(chat_id=chat_id, photo=file_id, caption=intro)
     else:

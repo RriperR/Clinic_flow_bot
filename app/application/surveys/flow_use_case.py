@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from app.domain.entities import Answer, Pair
 from app.domain.repositories import (
@@ -22,7 +22,7 @@ class SurveyFlowService:
         self.surveys = surveys
         self.answers = answers
 
-    async def get_ready_pairs_for_today(self, today: str) -> list[Pair]:
+    async def get_ready_pairs_for_today(self, today: date) -> list[Pair]:
         return list(await self.pairs.list_ready_by_date(today))
 
     async def reset_incomplete(self) -> None:
@@ -55,7 +55,7 @@ class SurveyFlowService:
             object=pair.object,
             survey=pair.survey,
             survey_date=pair.date,
-            completed_at=str(now),
+            completed_at=now,
             question1=survey.question1,
             answer1=a1,
             question2=survey.question2,

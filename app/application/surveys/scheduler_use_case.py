@@ -16,7 +16,7 @@ class SurveyScheduler:
         self.logger.info("📤 Запуск рассылки опросов")
         await self.survey_flow.reset_incomplete()
 
-        today = datetime.now().strftime("%d.%m.%Y")
+        today = datetime.now().date()
         pairs = await self.survey_flow.get_ready_pairs_for_today(today)
 
         by_user: dict[str, list[Pair]] = defaultdict(list)

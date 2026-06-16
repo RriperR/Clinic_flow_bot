@@ -4,9 +4,9 @@ from datetime import date as date_type
 from app.domain.shifts.value_objects import ShiftType
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Shift:
-    id: int | None
+    id: int | None = None
     assistant_id: int | None
     doctor_name: str
     date: date_type

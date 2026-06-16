@@ -103,8 +103,8 @@ class ReportsService:
         return result
 
     def _calculate_scores_for_worker(self, answers, surveys_by_name, now: datetime):
-        one_month_ago = now - timedelta(days=30)
-        six_months_ago = now - timedelta(days=180)
+        one_month_ago = (now - timedelta(days=30)).date()
+        six_months_ago = (now - timedelta(days=180)).date()
 
         results = {
             "Month": defaultdict(lambda: defaultdict(list)),
@@ -119,8 +119,8 @@ class ReportsService:
             if not survey:
                 continue
 
-            survey_date = self._parse_russian_date(ans.survey_date)
-            if not survey_date:
+            survey_date = ans.survey_date
+            if survey_date is None:
                 continue
 
             for i in range(1, 5 + 1):
@@ -147,12 +147,6 @@ class ReportsService:
                         open_answers[survey.speciality].append((question_text, str(raw_answer).strip()))
 
         return results, open_answers
-
-    def _parse_russian_date(self, date_str: str):
-        try:
-            return datetime.strptime(date_str, "%d.%m.%Y").replace(tzinfo=ZoneInfo("Europe/Moscow"))
-        except Exception:
-            return None
 
     def _split_message(self, text: str, max_len: int = 4096):
         lines = text.split("\n")

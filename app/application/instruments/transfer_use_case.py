@@ -67,21 +67,22 @@ class InstrumentTransferService:
         sterilization = await self.get_sterilization_cabinet()
         if not sterilization:
             return False
+        allowed = False
         if from_cabinet_id == sterilization.id:
             last_move = await self.moves.get_last_for_instrument(instrument_id)
             if last_move and last_move.to_cabinet_id == sterilization.id:
-                return last_move.from_cabinet_id == to_cabinet_id
+                allowed = last_move.from_cabinet_id == to_cabinet_id
         else:
-            if to_cabinet_id != sterilization.id:
-                return False
+            allowed = to_cabinet_id == sterilization.id
+        if not allowed:
+            return False
 
         updated = await self.instruments.update_cabinet(instrument_id, to_cabinet_id)
         if not updated:
             return False
 
-        moved_at = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+        moved_at = datetime.now()
         move = InstrumentMove(
-            id=None,
             instrument_id=instrument_id,
             from_cabinet_id=from_cabinet_id,
             to_cabinet_id=to_cabinet_id,

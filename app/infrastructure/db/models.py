@@ -1,9 +1,10 @@
 import os
+from datetime import date, datetime
 
 from dotenv import load_dotenv
-from sqlalchemy import BigInteger, Boolean, Column, Integer, select, String, Text, text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Integer, select, String, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncAttrs, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 load_dotenv()
 
@@ -25,89 +26,89 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 class AdminUser(Base):
     __tablename__ = "admins"
-    id = Column(BigInteger, primary_key=True)
-    chat_id = Column(String(31), unique=True, nullable=False)
-    added_at = Column(String(63))
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    chat_id: Mapped[str] = mapped_column(String(31), unique=True, nullable=False)
+    added_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class Worker(Base):
     __tablename__ = "workers"
-    id = Column(BigInteger, primary_key=True)
-    full_name = Column(Text)
-    file_id = Column(String(255))
-    chat_id = Column(String(31))
-    speciality = Column(String(255))
-    phone = Column(String(31))
-    is_active = Column(Boolean, default=True)
-    shifts_week = Column(Integer, default=0, nullable=False)
-    shifts_month = Column(Integer, default=0, nullable=False)
-    given_week = Column(Integer, default=0, nullable=False)
-    given_month = Column(Integer, default=0, nullable=False)
-    replacement_week = Column(Integer, default=0, nullable=False)
-    replacement_month = Column(Integer, default=0, nullable=False)
-    manual_week = Column(Integer, default=0, nullable=False)
-    manual_month = Column(Integer, default=0, nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    full_name: Mapped[str | None] = mapped_column(Text)
+    file_id: Mapped[str | None] = mapped_column(String(255))
+    chat_id: Mapped[str | None] = mapped_column(String(31))
+    speciality: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(31))
+    is_active: Mapped[bool | None] = mapped_column(Boolean, default=True)
+    shifts_week: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    shifts_month: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    given_week: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    given_month: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    replacement_week: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    replacement_month: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    manual_week: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    manual_month: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
 class Pair(Base):
     __tablename__ = "pairs"
-    id = Column(BigInteger, primary_key=True)
-    subject = Column(Text)
-    object = Column(Text)
-    survey = Column(Text)
-    weekday = Column(String(31))
-    date = Column(String(31))
-    status = Column(String(15), default="ready")
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    subject: Mapped[str | None] = mapped_column(Text)
+    object: Mapped[str | None] = mapped_column(Text)
+    survey: Mapped[str | None] = mapped_column(Text)
+    weekday: Mapped[str | None] = mapped_column(String(31))
+    date: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str | None] = mapped_column(String(15), default="ready")
 
 
 class Survey(Base):
     __tablename__ = "surveys"
-    id = Column(BigInteger, primary_key=True)
-    speciality = Column(String(511))
-    question1 = Column(Text)
-    question1_type = Column(String(7))
-    question2 = Column(Text)
-    question2_type = Column(String(7))
-    question3 = Column(Text)
-    question3_type = Column(String(7))
-    question4 = Column(Text)
-    question4_type = Column(String(7))
-    question5 = Column(Text)
-    question5_type = Column(String(7))
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    speciality: Mapped[str | None] = mapped_column(String(511))
+    question1: Mapped[str | None] = mapped_column(Text)
+    question1_type: Mapped[str | None] = mapped_column(String(7))
+    question2: Mapped[str | None] = mapped_column(Text)
+    question2_type: Mapped[str | None] = mapped_column(String(7))
+    question3: Mapped[str | None] = mapped_column(Text)
+    question3_type: Mapped[str | None] = mapped_column(String(7))
+    question4: Mapped[str | None] = mapped_column(Text)
+    question4_type: Mapped[str | None] = mapped_column(String(7))
+    question5: Mapped[str | None] = mapped_column(Text)
+    question5_type: Mapped[str | None] = mapped_column(String(7))
 
 
 class Answer(Base):
     __tablename__ = "answers"
-    id = Column(BigInteger, primary_key=True)
-    subject = Column(Text)
-    object = Column(Text)
-    survey = Column(Text)
-    survey_date = Column(String(31))
-    completed_at = Column(String(63))
-    question1 = Column(Text)
-    answer1 = Column(Text)
-    question2 = Column(Text)
-    answer2 = Column(Text)
-    question3 = Column(Text)
-    answer3 = Column(Text)
-    question4 = Column(Text)
-    answer4 = Column(Text)
-    question5 = Column(Text)
-    answer5 = Column(Text)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    subject: Mapped[str | None] = mapped_column(Text)
+    object: Mapped[str | None] = mapped_column(Text)
+    survey: Mapped[str | None] = mapped_column(Text)
+    survey_date: Mapped[date | None] = mapped_column(Date)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    question1: Mapped[str | None] = mapped_column(Text)
+    answer1: Mapped[str | None] = mapped_column(Text)
+    question2: Mapped[str | None] = mapped_column(Text)
+    answer2: Mapped[str | None] = mapped_column(Text)
+    question3: Mapped[str | None] = mapped_column(Text)
+    answer3: Mapped[str | None] = mapped_column(Text)
+    question4: Mapped[str | None] = mapped_column(Text)
+    answer4: Mapped[str | None] = mapped_column(Text)
+    question5: Mapped[str | None] = mapped_column(Text)
+    answer5: Mapped[str | None] = mapped_column(Text)
 
 
 class Shift(Base):
     __tablename__ = "shifts"
-    id = Column(BigInteger, primary_key=True)
-    assistant_id = Column(BigInteger)
-    doctor_name = Column(Text)
-    date = Column(String(31))
-    type = Column(String(10))
-    scheduled_assistant_name = Column(Text, nullable=True)
-    speciality = Column(Text, nullable=True)
-    cabinet = Column(Text, nullable=True)
-    assistant_name = Column(Text, nullable=True)
-    manual = Column(Boolean, default=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    assistant_id: Mapped[int | None] = mapped_column(BigInteger)
+    doctor_name: Mapped[str | None] = mapped_column(Text)
+    date: Mapped[date | None] = mapped_column(Date)
+    type: Mapped[str | None] = mapped_column(String(10))
+    scheduled_assistant_name: Mapped[str | None] = mapped_column(Text)
+    speciality: Mapped[str | None] = mapped_column(Text)
+    cabinet: Mapped[str | None] = mapped_column(Text)
+    assistant_name: Mapped[str | None] = mapped_column(Text)
+    manual: Mapped[bool | None] = mapped_column(Boolean, default=False)
 
     # Один ассистент — не больше одной смены в слоте (дата + тип).
     # В Postgres NULL-значения assistant_id считаются различными,
@@ -117,72 +118,62 @@ class Shift(Base):
 
 class Cabinet(Base):
     __tablename__ = "cabinets"
-    id = Column(BigInteger, primary_key=True)
-    name = Column(Text)
-    is_active = Column(Boolean, default=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    name: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool | None] = mapped_column(Boolean, default=True)
 
 
 class Instrument(Base):
     __tablename__ = "instruments"
-    id = Column(BigInteger, primary_key=True)
-    name = Column(Text)
-    cabinet_id = Column(BigInteger)
-    is_active = Column(Boolean, default=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    name: Mapped[str | None] = mapped_column(Text)
+    cabinet_id: Mapped[int | None] = mapped_column(BigInteger)
+    is_active: Mapped[bool | None] = mapped_column(Boolean, default=True)
 
 
 class InstrumentMove(Base):
     __tablename__ = "instrument_moves"
-    id = Column(BigInteger, primary_key=True)
-    instrument_id = Column(BigInteger)
-    from_cabinet_id = Column(BigInteger)
-    to_cabinet_id = Column(BigInteger)
-    before_photo_id = Column(String(255))
-    after_photo_id = Column(String(255))
-    moved_by_chat_id = Column(String(31))
-    moved_at = Column(String(63))
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    instrument_id: Mapped[int | None] = mapped_column(BigInteger)
+    from_cabinet_id: Mapped[int | None] = mapped_column(BigInteger)
+    to_cabinet_id: Mapped[int | None] = mapped_column(BigInteger)
+    before_photo_id: Mapped[str | None] = mapped_column(String(255))
+    after_photo_id: Mapped[str | None] = mapped_column(String(255))
+    moved_by_chat_id: Mapped[str | None] = mapped_column(String(31))
+    moved_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class KnowledgeSection(Base):
     __tablename__ = "knowledge_sections"
-    id = Column(BigInteger, primary_key=True)
-    title = Column(Text, nullable=False)
-    position = Column(Integer, default=0, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class KnowledgeManipulation(Base):
     __tablename__ = "knowledge_manipulations"
-    id = Column(BigInteger, primary_key=True)
-    section_id = Column(BigInteger, nullable=False)
-    title = Column(Text, nullable=False)
-    position = Column(Integer, default=0, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    section_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class KnowledgeItem(Base):
     __tablename__ = "knowledge_items"
-    id = Column(BigInteger, primary_key=True)
-    manipulation_id = Column(BigInteger, nullable=False)
-    title = Column(Text, nullable=True)
-    item_number = Column(Text, nullable=True)
-    text = Column(Text, nullable=True)
-    extra = Column(Text, nullable=True)
-    position = Column(Integer, default=0, nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    manipulation_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    title: Mapped[str | None] = mapped_column(Text)
+    item_number: Mapped[str | None] = mapped_column(Text)
+    text: Mapped[str | None] = mapped_column(Text)
+    extra: Mapped[str | None] = mapped_column(Text)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
 async def async_main():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        # create_all не меняет уже существующие таблицы, поэтому уникальный
-        # индекс для смен создаём идемпотентно — иначе на старых БД инвариант
-        # «один ассистент — одна смена в слоте» не будет защищён от гонок.
-        await conn.execute(
-            text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_shift_assistant_slot "
-                "ON shifts (assistant_id, date, type)"
-            )
-        )
-
+    # Схему создаёт и мигрирует Alembic (`alembic upgrade head`), а не приложение.
+    # Здесь остаётся только засев обязательных данных.
     async with async_session() as session:
         result = await session.execute(select(Cabinet).where(Cabinet.name == "Стерилизационная"))
         if result.scalar_one_or_none() is None:

@@ -35,7 +35,6 @@ class KnowledgeBaseService:
             sections.append(
                 (
                     KnowledgeSection(
-                        id=None,
                         title=section_title,
                         position=section_position,
                     ),
@@ -87,7 +86,6 @@ class KnowledgeBaseService:
             manipulations.append(
                 (
                     KnowledgeManipulation(
-                        id=None,
                         section_id=0,
                         title=manipulation_title,
                         position=len(manipulations),
@@ -111,7 +109,6 @@ class KnowledgeBaseService:
 
             items.append(
                 KnowledgeItem(
-                    id=None,
                     manipulation_id=0,
                     title=title,
                     item_number=item_number,

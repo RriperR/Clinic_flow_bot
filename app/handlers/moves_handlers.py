@@ -47,7 +47,8 @@ def create_moves_router(moves_service: InstrumentAdminService) -> Router:
                 inst_name = instrument_map.get(move.instrument_id, f"#{move.instrument_id}")
                 from_name = cabinet_map.get(move.from_cabinet_id, f"#{move.from_cabinet_id}")
                 to_name = cabinet_map.get(move.to_cabinet_id, f"#{move.to_cabinet_id}")
-                blocks.append(f"#{move.id} 🕒 {move.moved_at} — {inst_name}\n{from_name} ➡️ {to_name}")
+                moved_at = move.moved_at.strftime("%d.%m.%Y %H:%M:%S")
+                blocks.append(f"#{move.id} 🕒 {moved_at} — {inst_name}\n{from_name} ➡️ {to_name}")
             text = "📦 Последние перемещения:\n" + "\n\n".join(blocks)
 
         markup = build_moves_keyboard(moves) if moves else None
