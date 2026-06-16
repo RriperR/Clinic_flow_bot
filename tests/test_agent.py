@@ -1,5 +1,6 @@
+from app.application.agent.privacy import ShiftTargetCandidate
 from app.application.agent.tools import Tool, ToolRegistry
-from app.application.agent.use_case import AgentService
+from app.application.agent.use_case import AgentRunResult, AgentService
 from app.application.llm.ports import LlmCompletion, LlmMessage, LlmRole, ToolCall, ToolSpec
 from app.domain.entities import Worker
 
@@ -72,6 +73,26 @@ async def test_agent_sends_only_sanitized_shift_target_to_llm() -> None:
     sent_content = "\n".join(message.content for message in llm.calls[0])
     assert "Иванова" not in sent_content
     assert "[SHIFT_TARGET_1]" in sent_content
+
+
+def test_agent_run_result_exposes_ambiguous_flag() -> None:
+    result = AgentRunResult(
+        text="choose",
+        sanitized_text="choose",
+        sanitized_user_message="question",
+        ambiguous_ref="[SHIFT_TARGET_1]",
+        candidates=(),
+    )
+    assert not result.is_ambiguous
+
+    result = AgentRunResult(
+        text="choose",
+        sanitized_text="choose",
+        sanitized_user_message="question",
+        ambiguous_ref="[SHIFT_TARGET_1]",
+        candidates=(ShiftTargetCandidate(worker_id=1, label="Name", score=1.0),),
+    )
+    assert result.is_ambiguous
 
 
 async def test_registry_reports_unknown_tool() -> None:

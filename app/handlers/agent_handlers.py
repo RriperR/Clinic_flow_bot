@@ -1,5 +1,6 @@
 import secrets
 from datetime import date, datetime
+from time import perf_counter
 from typing import Any
 
 from aiogram import F, Router
@@ -156,13 +157,25 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
         history_raw: list[list[str]] = data.get("history", [])
         history = build_history(history_raw)
         progress = progress_message or await message.answer(AGENT_THINKING)
+        started = perf_counter()
+        chat_id = actor_id if actor_id is not None else message.from_user.id
+        logger.info(
+            "agent.handler start chat_id=%s question_chars=%d history=%d preprocessed=%s",
+            chat_id,
+            len(question),
+            len(history),
+            preprocessed is not None,
+        )
 
         await message.bot.send_chat_action(message.chat.id, "typing")
         try:
-            chat_id = actor_id if actor_id is not None else message.from_user.id
             reply = await agent.run_with_context(chat_id, question, history, preprocessed=preprocessed)
         except Exception:
-            logger.exception("agent.run failed for chat=%s", message.chat.id)
+            logger.exception(
+                "agent.handler failed chat_id=%s elapsed_ms=%d",
+                chat_id,
+                int((perf_counter() - started) * 1000),
+            )
             await progress.edit_text(ASK_ERROR)
             return
 
@@ -172,6 +185,14 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
 
         text = append_confirmation_prompt(reply.text or EMPTY_ANSWER, reply.pending_action)
         await progress.edit_text(text, reply_markup=markup)
+        logger.info(
+            "agent.handler done chat_id=%s elapsed_ms=%d pending=%s ambiguous=%s answer_chars=%d",
+            chat_id,
+            int((perf_counter() - started) * 1000),
+            reply.pending_action.kind if reply.pending_action else None,
+            reply.is_ambiguous,
+            len(reply.sanitized_text),
+        )
 
     @router.message(Command("ask"))
     async def start_ask(message: Message, state: FSMContext, command: CommandObject) -> None:

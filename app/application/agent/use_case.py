@@ -1,10 +1,14 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from time import perf_counter
 
 from app.application.agent.privacy import SanitizedAgentMessage, ShiftTargetCandidate, ShiftTargetResolver
 from app.application.agent.tools import AgentPendingAction, AgentToolContext, ToolRegistry
 from app.application.llm.ports import LlmClient, LlmMessage, LlmRole
 from app.application.shifts.use_case import ShiftService
+from app.logger import setup_logger
+
+logger = setup_logger("agent", "agent.log")
 
 
 @dataclass(frozen=True)
@@ -16,6 +20,10 @@ class AgentRunResult:
     ambiguous_ref: str | None = None
     candidates: tuple[ShiftTargetCandidate, ...] = ()
     needs_target_clarification: bool = False
+
+    @property
+    def is_ambiguous(self) -> bool:
+        return self.ambiguous_ref is not None and bool(self.candidates)
 
 
 class AgentService:
@@ -53,8 +61,23 @@ class AgentService:
         history: Sequence[LlmMessage] | None = None,
         preprocessed: SanitizedAgentMessage | None = None,
     ) -> AgentRunResult:
+        started = perf_counter()
         sanitized = preprocessed or await self._sanitize_message(user_message)
+        logger.info(
+            "agent.run start chat_id=%s sanitized=%r targets=%s ambiguous=%s clarification=%s history=%s",
+            chat_id,
+            sanitized.text,
+            list(sanitized.targets),
+            sanitized.is_ambiguous,
+            sanitized.needs_target_clarification,
+            len(history or []),
+        )
         if sanitized.is_ambiguous or sanitized.needs_target_clarification:
+            logger.info(
+                "agent.run needs_resolution chat_id=%s elapsed_ms=%d",
+                chat_id,
+                int((perf_counter() - started) * 1000),
+            )
             return AgentRunResult(
                 text=self._format_resolution_problem(sanitized),
                 sanitized_text=self._format_resolution_problem(sanitized, sanitized_output=True),
@@ -70,7 +93,15 @@ class AgentService:
             targets={target.ref: target.worker_id for target in sanitized.targets.values()},
             labels=labels,
         )
-        return await self._run_sanitized(sanitized.text, history, context)
+        result = await self._run_sanitized(sanitized.text, history, context)
+        logger.info(
+            "agent.run done chat_id=%s elapsed_ms=%d pending=%s answer_chars=%d",
+            chat_id,
+            int((perf_counter() - started) * 1000),
+            result.pending_action.kind if result.pending_action else None,
+            len(result.sanitized_text),
+        )
+        return result
 
     async def _run_sanitized(
         self,
@@ -83,8 +114,16 @@ class AgentService:
         tools = self._tools.specs() or None
         pending_action: AgentPendingAction | None = None
 
-        for _ in range(self._max_steps):
+        for step in range(1, self._max_steps + 1):
+            logger.info("agent.llm start step=%s messages=%s tools=%s", step, len(messages), bool(tools))
             completion = await self._llm.complete(messages, system=self._system_prompt, tools=tools)
+            logger.info(
+                "agent.llm done step=%s finish_reason=%s tool_calls=%s text_chars=%d",
+                step,
+                completion.finish_reason,
+                [call.name for call in completion.tool_calls],
+                len(completion.text or ""),
+            )
             if not completion.tool_calls:
                 sanitized_text = completion.text or ""
                 return AgentRunResult(
@@ -102,11 +141,20 @@ class AgentService:
                 )
             )
             for call in completion.tool_calls:
+                logger.info("agent.tool start step=%s name=%s args=%s", step, call.name, call.arguments)
                 result = await self._tools.invoke(call.name, call.arguments, context)
+                logger.info(
+                    "agent.tool done step=%s name=%s result_chars=%d pending=%s",
+                    step,
+                    call.name,
+                    len(result.content),
+                    result.pending_action.kind if result.pending_action else None,
+                )
                 pending_action = result.pending_action or pending_action
                 messages.append(LlmMessage(role=LlmRole.TOOL, content=result.content, tool_call_id=call.id))
 
         # Лимит шагов исчерпан — последний вызов без тулов, чтобы вернуть текст.
+        logger.warning("agent.llm max_steps_exhausted steps=%s", self._max_steps)
         final = await self._llm.complete(messages, system=self._system_prompt)
         sanitized_text = final.text or ""
         return AgentRunResult(
