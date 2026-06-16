@@ -31,18 +31,15 @@ class ManualShiftConfirm(CallbackData, prefix="msc"):
 
 class AgentTargetChoice(CallbackData, prefix="atc"):
     worker_id: int
+    token: str
 
 
 class AgentShiftSignupConfirm(CallbackData, prefix="assc"):
-    target_id: int
-    shift_date: str
-    shift_type: str
-    manual: bool
+    token: str
 
 
 class AgentShiftCancelConfirm(CallbackData, prefix="ascc"):
-    shift_date: str
-    shift_type: str
+    token: str
 
 
 async def build_worker_keyboard(registration: RegistrationService) -> InlineKeyboardMarkup:
@@ -280,14 +277,14 @@ def build_manual_shift_confirm_keyboard(doctor_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def build_agent_target_choice_keyboard(candidates: Sequence[Worker]) -> InlineKeyboardMarkup:
+def build_agent_target_choice_keyboard(candidates: Sequence[Worker], token: str) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for worker in candidates:
         if worker.id is None:
             continue
         builder.button(
             text=worker.full_name[:64],
-            callback_data=AgentTargetChoice(worker_id=worker.id).pack(),
+            callback_data=AgentTargetChoice(worker_id=worker.id, token=token).pack(),
         )
     builder.button(text="Отмена", callback_data="agent_action_cancel")
     builder.adjust(1)
@@ -295,23 +292,14 @@ def build_agent_target_choice_keyboard(candidates: Sequence[Worker]) -> InlineKe
 
 
 def build_agent_shift_signup_confirm_keyboard(
-    target_id: int,
-    shift_date: str,
-    shift_type: str,
-    *,
-    manual: bool,
+    token: str,
 ) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text="Да",
-                    callback_data=AgentShiftSignupConfirm(
-                        target_id=target_id,
-                        shift_date=shift_date,
-                        shift_type=shift_type,
-                        manual=manual,
-                    ).pack(),
+                    callback_data=AgentShiftSignupConfirm(token=token).pack(),
                 ),
                 InlineKeyboardButton(text="Нет", callback_data="agent_action_cancel"),
             ]
@@ -319,13 +307,13 @@ def build_agent_shift_signup_confirm_keyboard(
     )
 
 
-def build_agent_shift_cancel_confirm_keyboard(shift_date: str, shift_type: str) -> InlineKeyboardMarkup:
+def build_agent_shift_cancel_confirm_keyboard(token: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
                     text="Да",
-                    callback_data=AgentShiftCancelConfirm(shift_date=shift_date, shift_type=shift_type).pack(),
+                    callback_data=AgentShiftCancelConfirm(token=token).pack(),
                 ),
                 InlineKeyboardButton(text="Нет", callback_data="agent_action_cancel"),
             ]

@@ -50,6 +50,38 @@ def test_resolver_blocks_unmasked_shift_target_request() -> None:
     assert result.needs_target_clarification
 
 
+def test_resolver_sanitizes_multiple_targets() -> None:
+    resolver = ShiftTargetResolver()
+
+    result = resolver.sanitize(
+        "Есть ли слот у Ивановой или Петровой?",
+        [
+            Worker(id=1, full_name="Иванова Мария Сергеевна"),
+            Worker(id=2, full_name="Петрова Анна Игоревна"),
+        ],
+    )
+
+    assert result.text == "Есть ли слот у [SHIFT_TARGET_1] или [SHIFT_TARGET_2]?"
+    assert result.targets["[SHIFT_TARGET_1]"].worker_id == 1
+    assert result.targets["[SHIFT_TARGET_2]"].worker_id == 2
+
+
+def test_resolver_blocks_unmatched_write_request_without_preposition() -> None:
+    resolver = ShiftTargetResolver()
+
+    result = resolver.sanitize("Запиши Петрову", [])
+
+    assert result.needs_target_clarification
+
+
+def test_resolver_blocks_unmatched_shift_target_with_extended_preposition() -> None:
+    resolver = ShiftTargetResolver()
+
+    result = resolver.sanitize("Есть ли свободный слот с Петровой?", [])
+
+    assert result.needs_target_clarification
+
+
 def test_resolver_allows_shift_status_without_target() -> None:
     resolver = ShiftTargetResolver()
 

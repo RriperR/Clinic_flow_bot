@@ -76,22 +76,40 @@ def normalize_private_text(value: str | None) -> str:
 class ShiftTargetResolver:
     def sanitize(self, text: str, workers: Sequence[Worker]) -> SanitizedAgentMessage:
         tokens = self._tokenize(text)
-        match = self._best_match(tokens, workers)
-        if match is None:
+        matches = self._all_matches(tokens, workers)
+        if not matches:
             return SanitizedAgentMessage(
                 text=text,
                 targets={},
                 needs_target_clarification=self._looks_like_shift_target_request(text),
             )
 
-        ref = "[SHIFT_TARGET_1]"
-        sanitized_text = f"{text[: match.start]}{ref}{text[match.end :]}"
-        candidates = match.candidates
-        if self._is_ambiguous(candidates):
-            return SanitizedAgentMessage(text=sanitized_text, targets={}, ambiguous_ref=ref, candidates=candidates)
+        sanitized_text = text
+        targets: dict[str, ShiftTarget] = {}
+        ambiguous_ref: str | None = None
+        ambiguous_candidates: tuple[ShiftTargetCandidate, ...] = ()
+        for index, match in enumerate(reversed(matches), start=1):
+            ref = f"[SHIFT_TARGET_{len(matches) - index + 1}]"
+            sanitized_text = f"{sanitized_text[: match.start]}{ref}{sanitized_text[match.end :]}"
+            if self._is_ambiguous(match.candidates):
+                ambiguous_ref = ref
+                ambiguous_candidates = match.candidates
+                continue
+            targets[ref] = ShiftTarget(
+                ref=ref,
+                worker_id=match.candidates[0].worker_id,
+                label=match.candidates[0].label,
+            )
 
-        target = ShiftTarget(ref=ref, worker_id=candidates[0].worker_id, label=candidates[0].label)
-        return SanitizedAgentMessage(text=sanitized_text, targets={ref: target})
+        if ambiguous_ref:
+            return SanitizedAgentMessage(
+                text=sanitized_text,
+                targets={},
+                ambiguous_ref=ambiguous_ref,
+                candidates=ambiguous_candidates,
+            )
+
+        return SanitizedAgentMessage(text=sanitized_text, targets=targets)
 
     def _tokenize(self, text: str) -> list[_Token]:
         return [
@@ -104,8 +122,20 @@ class ShiftTargetResolver:
             for match in _TOKEN_RE.finditer(text)
         ]
 
-    def _best_match(self, tokens: list[_Token], workers: Sequence[Worker]) -> _Match | None:
-        best: _Match | None = None
+    def _all_matches(self, tokens: list[_Token], workers: Sequence[Worker]) -> list[_Match]:
+        candidates = self._candidate_matches(tokens, workers)
+        selected: list[_Match] = []
+        occupied: set[int] = set()
+        for match in sorted(candidates, key=lambda item: (-item.score, -(item.end - item.start))):
+            covered = set(range(match.start, match.end))
+            if occupied.intersection(covered):
+                continue
+            selected.append(match)
+            occupied.update(covered)
+        return sorted(selected, key=lambda item: item.start)
+
+    def _candidate_matches(self, tokens: list[_Token], workers: Sequence[Worker]) -> list[_Match]:
+        matches: list[_Match] = []
         max_window = min(4, len(tokens))
         for start_index in range(len(tokens)):
             for size in range(1, max_window + 1):
@@ -124,9 +154,8 @@ class ShiftTargetResolver:
                     text=phrase,
                     candidates=tuple(candidates),
                 )
-                if best is None or (match.score, len(match.text)) > (best.score, len(best.text)):
-                    best = match
-        return best
+                matches.append(match)
+        return matches
 
     def _rank_candidates(self, phrase: str, workers: Sequence[Worker]) -> list[ShiftTargetCandidate]:
         ranked: list[ShiftTargetCandidate] = []
@@ -175,4 +204,6 @@ class ShiftTargetResolver:
             return False
         if any(marker in normalized for marker in (" у меня ", " моя ", " мою ", " отмен", " я запис")):
             return False
-        return any(marker in normalized for marker in (" к ", " ко ", " у "))
+        if any(marker in normalized for marker in (" запис", " запиш")):
+            return True
+        return any(marker in normalized for marker in (" к ", " ко ", " у ", " с ", " со ", " в ", " во "))

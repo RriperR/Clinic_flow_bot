@@ -1,4 +1,6 @@
-from datetime import date
+import secrets
+from datetime import date, datetime
+from typing import Any
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandObject, StateFilter
@@ -34,6 +36,8 @@ WORKER_NOT_FOUND_MSG = "Мы не нашли вас в базе, сначала 
 TARGET_NOT_FOUND_MSG = "Цель смены не найдена."
 
 MAX_HISTORY_MESSAGES = 10
+PENDING_TTL_SECONDS = 10 * 60
+PENDING_ACTIONS_KEY = "agent_pending_actions"
 
 
 class AgentState(StatesGroup):
@@ -46,23 +50,75 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
     def build_history(history_raw: list[list[str]]) -> list[LlmMessage]:
         return [LlmMessage(role=LlmRole(role), content=content) for role, content in history_raw]
 
-    def result_markup(result: AgentRunResult) -> InlineKeyboardMarkup | None:
+    def fresh_pending_actions(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        now = datetime.now().timestamp()
+        raw_actions = data.get(PENDING_ACTIONS_KEY, {})
+        return {
+            token: action
+            for token, action in raw_actions.items()
+            if now - float(action.get("created_at", 0)) <= PENDING_TTL_SECONDS
+        }
+
+    async def store_pending_action(state: FSMContext, kind: str, payload: dict[str, Any]) -> str:
+        data = await state.get_data()
+        actions = fresh_pending_actions(data)
+        token = secrets.token_hex(4)
+        actions[token] = {"kind": kind, "created_at": datetime.now().timestamp(), **payload}
+        await state.update_data(**{PENDING_ACTIONS_KEY: actions})
+        return token
+
+    async def pop_pending_action(state: FSMContext, token: str, kind: str) -> dict[str, Any] | None:
+        data = await state.get_data()
+        actions = fresh_pending_actions(data)
+        action = actions.pop(token, None)
+        await state.update_data(**{PENDING_ACTIONS_KEY: actions})
+        if not action or action.get("kind") != kind:
+            return None
+        return action
+
+    async def result_markup(state: FSMContext, result: AgentRunResult) -> InlineKeyboardMarkup | None:
         pending = result.pending_action
         if result.candidates:
             workers = [Worker(id=c.worker_id, full_name=c.label) for c in result.candidates]
-            return build_agent_target_choice_keyboard(workers)
+            token = await store_pending_action(
+                state,
+                "target_choice",
+                {
+                    "sanitized_text": result.sanitized_user_message,
+                    "target_ref": result.ambiguous_ref,
+                    "candidate_ids": [c.worker_id for c in result.candidates],
+                },
+            )
+            return build_agent_target_choice_keyboard(workers, token)
         if not pending:
             return None
         if pending.kind == "shift_signup" and pending.target_id and pending.shift_date and pending.shift_type:
-            return build_agent_shift_signup_confirm_keyboard(
-                pending.target_id,
-                pending.shift_date,
-                pending.shift_type,
-                manual=pending.manual,
+            token = await store_pending_action(
+                state,
+                "shift_signup",
+                {
+                    "target_id": pending.target_id,
+                    "shift_date": pending.shift_date,
+                    "shift_type": pending.shift_type,
+                    "manual": pending.manual,
+                },
             )
+            return build_agent_shift_signup_confirm_keyboard(token)
         if pending.kind == "shift_cancel" and pending.shift_date and pending.shift_type:
-            return build_agent_shift_cancel_confirm_keyboard(pending.shift_date, pending.shift_type)
+            token = await store_pending_action(
+                state,
+                "shift_cancel",
+                {
+                    "shift_date": pending.shift_date,
+                    "shift_type": pending.shift_type,
+                },
+            )
+            return build_agent_shift_cancel_confirm_keyboard(token)
         return None
+
+    def is_current_slot(shift_date: date, shift_type: str) -> bool:
+        current_type, current_date = shift_service.guess_shift_type_from_now()
+        return current_type is not None and current_date == shift_date and str(current_type) == shift_type
 
     def append_confirmation_prompt(text: str, pending: AgentPendingAction | None) -> str:
         if not pending:
@@ -110,13 +166,8 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
             await progress.edit_text(ASK_ERROR)
             return
 
-        markup = result_markup(reply)
-        if reply.is_ambiguous:
-            await state.update_data(
-                agent_pending_sanitized_text=reply.sanitized_user_message,
-                agent_pending_ref=reply.ambiguous_ref,
-            )
-        else:
+        markup = await result_markup(state, reply)
+        if not reply.is_ambiguous:
             await save_history(state, history_raw, reply.sanitized_user_message, reply.sanitized_text)
 
         text = append_confirmation_prompt(reply.text or EMPTY_ANSWER, reply.pending_action)
@@ -139,10 +190,14 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
 
     @router.callback_query(AgentTargetChoice.filter())
     async def choose_agent_target(callback: CallbackQuery, callback_data: AgentTargetChoice, state: FSMContext) -> None:
-        data = await state.get_data()
-        sanitized_text = data.get("agent_pending_sanitized_text")
-        target_ref = data.get("agent_pending_ref")
-        if not sanitized_text or not target_ref:
+        action = await pop_pending_action(state, callback_data.token, "target_choice")
+        if not action:
+            await callback.answer("Запрос устарел", show_alert=True)
+            return
+        sanitized_text = action.get("sanitized_text")
+        target_ref = action.get("target_ref")
+        candidate_ids = action.get("candidate_ids", [])
+        if callback_data.worker_id not in candidate_ids or not sanitized_text or not target_ref:
             await callback.answer("Запрос устарел", show_alert=True)
             return
 
@@ -156,7 +211,6 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
             text=sanitized_text,
             targets={target_ref: ShiftTarget(ref=target_ref, worker_id=target.id, label=target.full_name)},
         )
-        await state.update_data(agent_pending_sanitized_text=None, agent_pending_ref=None)
         await answer_question(
             callback.message,
             state,
@@ -171,26 +225,39 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
     async def confirm_agent_shift_signup(
         callback: CallbackQuery,
         callback_data: AgentShiftSignupConfirm,
+        state: FSMContext,
     ) -> None:
+        action = await pop_pending_action(state, callback_data.token, "shift_signup")
+        if not action:
+            await callback.answer("Запрос устарел", show_alert=True)
+            return
+
         worker = await shift_service.get_worker(callback.from_user.id)
         if not worker:
             await callback.answer(WORKER_NOT_FOUND_MSG, show_alert=True)
             return
 
-        shift_date = date.fromisoformat(callback_data.shift_date)
-        if callback_data.manual:
+        shift_date = date.fromisoformat(str(action["shift_date"]))
+        shift_type = str(action["shift_type"])
+        if not is_current_slot(shift_date, shift_type):
+            await callback.message.edit_text("Запрос устарел. Проверьте текущую смену заново.")
+            await callback.answer()
+            return
+
+        target_id = int(action["target_id"])
+        if action.get("manual"):
             signup = await shift_service.confirm_manual_signup(
                 worker,
-                callback_data.target_id,
+                target_id,
                 shift_date,
-                callback_data.shift_type,
+                shift_type,
             )
         else:
             signup = await shift_service.signup_to_doctor(
                 worker,
-                callback_data.target_id,
+                target_id,
                 shift_date,
-                callback_data.shift_type,
+                shift_type,
             )
 
         target = signup.doctor
@@ -204,14 +271,19 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
                 if not signup.has_schedule_slots
                 else "У этого сотрудника уже заняты все слоты."
             )
+            token = await store_pending_action(
+                state,
+                "shift_signup",
+                {
+                    "target_id": target.id,
+                    "shift_date": shift_date.isoformat(),
+                    "shift_type": shift_type,
+                    "manual": True,
+                },
+            )
             await callback.message.edit_text(
                 f"{reason} Создать ручную смену с {target.full_name}?",
-                reply_markup=build_agent_shift_signup_confirm_keyboard(
-                    target.id,
-                    callback_data.shift_date,
-                    callback_data.shift_type,
-                    manual=True,
-                ),
+                reply_markup=build_agent_shift_signup_confirm_keyboard(token),
             )
             await callback.answer()
             return
@@ -228,22 +300,34 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
     async def confirm_agent_shift_cancel(
         callback: CallbackQuery,
         callback_data: AgentShiftCancelConfirm,
+        state: FSMContext,
     ) -> None:
+        action = await pop_pending_action(state, callback_data.token, "shift_cancel")
+        if not action:
+            await callback.answer("Запрос устарел", show_alert=True)
+            return
+
         worker = await shift_service.get_worker(callback.from_user.id)
         if not worker:
             await callback.answer(WORKER_NOT_FOUND_MSG, show_alert=True)
             return
+        shift_date = date.fromisoformat(str(action["shift_date"]))
+        shift_type = str(action["shift_type"])
+        if not is_current_slot(shift_date, shift_type):
+            await callback.message.edit_text("Запрос устарел. Проверьте текущую смену заново.")
+            await callback.answer()
+            return
         await shift_service.remove_shift(
             worker.id,
-            date.fromisoformat(callback_data.shift_date),
-            callback_data.shift_type,
+            shift_date,
+            shift_type,
         )
         await callback.message.edit_text("Смена отменена.")
         await callback.answer()
 
     @router.callback_query(F.data == "agent_action_cancel")
     async def cancel_agent_action(callback: CallbackQuery, state: FSMContext) -> None:
-        await state.update_data(agent_pending_sanitized_text=None, agent_pending_ref=None)
+        await state.update_data(**{PENDING_ACTIONS_KEY: {}})
         await callback.message.edit_text("Действие отменено.")
         await callback.answer()
 
