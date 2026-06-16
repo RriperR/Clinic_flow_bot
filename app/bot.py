@@ -50,7 +50,8 @@ async def main():
             BotCommand(command="report", description="посмотреть отчёт"),
             BotCommand(command="move_instrument", description="перенести инструмент"),
             BotCommand(command="moves", description="история перемещений"),
-            BotCommand(command="ask", description="спросить ассистента"),
+            BotCommand(command="ask", description="спросить ии-агента"),
+            BotCommand(command="stop", description="выключить ии-агента"),
         ]
     )
 
