@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 from datetime import date, datetime
 from time import perf_counter
@@ -31,12 +32,14 @@ logger = setup_logger("agent", "agent.log")
 ASK_PROMPT = "Задайте вопрос по базе знаний клиники или по сменам. Для выхода — /stop."
 ASK_STOPPED = "Режим вопросов завершён."
 ASK_ERROR = "Не удалось получить ответ, попробуйте позже."
+ASK_TIMEOUT = "Агент отвечает слишком долго. Попробуйте ещё раз чуть позже."
 EMPTY_ANSWER = "Пустой ответ."
 AGENT_THINKING = "Агент думает..."
 WORKER_NOT_FOUND_MSG = "Мы не нашли вас в базе, сначала зарегистрируйтесь."
 TARGET_NOT_FOUND_MSG = "Цель смены не найдена."
 
 MAX_HISTORY_MESSAGES = 10
+AGENT_RESPONSE_TIMEOUT_SECONDS = 45
 PENDING_TTL_SECONDS = 10 * 60
 PENDING_ACTIONS_KEY = "agent_pending_actions"
 
@@ -140,6 +143,17 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
         updated = (history_raw + [["user", user_message], ["assistant", assistant_text]])[-MAX_HISTORY_MESSAGES:]
         await state.update_data(history=updated)
 
+    async def safe_edit_progress(
+        progress: Message,
+        text: str,
+        reply_markup: InlineKeyboardMarkup | None = None,
+    ) -> None:
+        try:
+            await progress.edit_text(text, reply_markup=reply_markup)
+        except Exception:
+            logger.exception("agent.progress edit failed chat_id=%s", progress.chat.id)
+            await progress.answer(text, reply_markup=reply_markup)
+
     async def answer_question(
         message: Message,
         state: FSMContext,
@@ -167,32 +181,44 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
             preprocessed is not None,
         )
 
-        await message.bot.send_chat_action(message.chat.id, "typing")
         try:
-            reply = await agent.run_with_context(chat_id, question, history, preprocessed=preprocessed)
+            await message.bot.send_chat_action(message.chat.id, "typing")
+            try:
+                reply = await asyncio.wait_for(
+                    agent.run_with_context(chat_id, question, history, preprocessed=preprocessed),
+                    timeout=AGENT_RESPONSE_TIMEOUT_SECONDS,
+                )
+            except TimeoutError:
+                logger.warning(
+                    "agent.handler timeout chat_id=%s elapsed_ms=%d timeout=%s",
+                    chat_id,
+                    int((perf_counter() - started) * 1000),
+                    AGENT_RESPONSE_TIMEOUT_SECONDS,
+                )
+                await safe_edit_progress(progress, ASK_TIMEOUT)
+                return
+
+            markup = await result_markup(state, reply)
+            if not reply.is_ambiguous:
+                await save_history(state, history_raw, reply.sanitized_user_message, reply.sanitized_text)
+
+            text = append_confirmation_prompt(reply.text or EMPTY_ANSWER, reply.pending_action)
+            await safe_edit_progress(progress, text, reply_markup=markup)
+            logger.info(
+                "agent.handler done chat_id=%s elapsed_ms=%d pending=%s ambiguous=%s answer_chars=%d",
+                chat_id,
+                int((perf_counter() - started) * 1000),
+                reply.pending_action.kind if reply.pending_action else None,
+                reply.is_ambiguous,
+                len(reply.sanitized_text),
+            )
         except Exception:
             logger.exception(
                 "agent.handler failed chat_id=%s elapsed_ms=%d",
                 chat_id,
                 int((perf_counter() - started) * 1000),
             )
-            await progress.edit_text(ASK_ERROR)
-            return
-
-        markup = await result_markup(state, reply)
-        if not reply.is_ambiguous:
-            await save_history(state, history_raw, reply.sanitized_user_message, reply.sanitized_text)
-
-        text = append_confirmation_prompt(reply.text or EMPTY_ANSWER, reply.pending_action)
-        await progress.edit_text(text, reply_markup=markup)
-        logger.info(
-            "agent.handler done chat_id=%s elapsed_ms=%d pending=%s ambiguous=%s answer_chars=%d",
-            chat_id,
-            int((perf_counter() - started) * 1000),
-            reply.pending_action.kind if reply.pending_action else None,
-            reply.is_ambiguous,
-            len(reply.sanitized_text),
-        )
+            await safe_edit_progress(progress, ASK_ERROR)
 
     @router.message(Command("ask"))
     async def start_ask(message: Message, state: FSMContext, command: CommandObject) -> None:
