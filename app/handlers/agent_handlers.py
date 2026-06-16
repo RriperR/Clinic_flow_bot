@@ -11,7 +11,6 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from app.application.agent.privacy import SanitizedAgentMessage, ShiftTarget
-from app.application.agent.tools import AgentPendingAction
 from app.application.agent.use_case import AgentRunResult, AgentService
 from app.application.llm.ports import LlmMessage, LlmRole
 from app.application.shifts.dto import ShiftSignupStatus
@@ -34,7 +33,7 @@ ASK_STOPPED = "Режим вопросов завершён."
 ASK_ERROR = "Не удалось получить ответ, попробуйте позже."
 ASK_TIMEOUT = "Агент отвечает слишком долго. Попробуйте ещё раз чуть позже."
 EMPTY_ANSWER = "Пустой ответ."
-AGENT_THINKING = "Агент думает..."
+AGENT_THINKING = "ИИ-агент думает..."
 WORKER_NOT_FOUND_MSG = "Мы не нашли вас в базе, сначала зарегистрируйтесь."
 TARGET_NOT_FOUND_MSG = "Цель смены не найдена."
 
@@ -124,15 +123,20 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
         current_type, current_date = shift_service.guess_shift_type_from_now()
         return current_type is not None and current_date == shift_date and str(current_type) == shift_type
 
-    def append_confirmation_prompt(text: str, pending: AgentPendingAction | None) -> str:
-        if not pending:
-            return text
+    async def build_confirmation_text(reply: AgentRunResult) -> str:
+        # Для подтверждаемых действий не используем формулировку модели
+        # (она путается в названиях кнопок и markdown), а собираем текст сами.
+        pending = reply.pending_action
+        if pending is None:
+            return reply.text or EMPTY_ANSWER
         if pending.kind == "shift_signup":
-            prompt = "Подтвердить создание ручной смены?" if pending.manual else "Подтвердить запись на смену?"
-            return f"{text}\n\n{prompt}"
+            target = await shift_service.get_worker_by_id(pending.target_id) if pending.target_id else None
+            name = target.full_name if target else "выбранному сотруднику"
+            question = f"Создать ручную смену с {name}?" if pending.manual else f"Записать вас на смену к {name}?"
+            return f"{question}\n\nНажмите «Да» для подтверждения или «Нет» для отмены."
         if pending.kind == "shift_cancel":
-            return f"{text}\n\nПодтвердить отмену смены?"
-        return text
+            return "Отменить вашу текущую смену?\n\nНажмите «Да» для подтверждения или «Нет» для отмены."
+        return reply.text or EMPTY_ANSWER
 
     async def save_history(
         state: FSMContext,
@@ -202,7 +206,7 @@ def create_agent_router(agent: AgentService, shift_service: ShiftService) -> Rou
             if not reply.is_ambiguous:
                 await save_history(state, history_raw, reply.sanitized_user_message, reply.sanitized_text)
 
-            text = append_confirmation_prompt(reply.text or EMPTY_ANSWER, reply.pending_action)
+            text = await build_confirmation_text(reply)
             await safe_edit_progress(progress, text, reply_markup=markup)
             logger.info(
                 "agent.handler done chat_id=%s elapsed_ms=%d pending=%s ambiguous=%s answer_chars=%d",
