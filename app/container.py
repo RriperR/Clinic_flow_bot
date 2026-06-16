@@ -3,6 +3,7 @@ from app.application.admin.sync_use_case import AdminSyncService
 from app.application.instruments.admin_use_case import InstrumentAdminService
 from app.application.instruments.transfer_use_case import InstrumentTransferService
 from app.application.knowledge_base.use_case import KnowledgeBaseService
+from app.application.llm.ports import LlmClient
 from app.application.registration.use_case import RegistrationService
 from app.application.reports.use_case import ReportsService
 from app.application.reports.worker_report_use_case import WorkerReportService
@@ -24,6 +25,7 @@ from app.infrastructure.db.repositories import (
     SqlAlchemyWorkerRepository,
 )
 from app.infrastructure.db.unit_of_work import SqlAlchemyUnitOfWork
+from app.infrastructure.llm.gateway import OpenAICompatibleLlmClient
 from app.infrastructure.sheets.gateway import SheetsGateway
 from app.presentation.reports.monthly_report_formatter import MonthlyReportTextRenderer
 
@@ -45,6 +47,10 @@ class Container:
         self.knowledge_base_repo = SqlAlchemyKnowledgeBaseRepository()
 
         self.sheets_gateway = SheetsGateway(self.settings.sheets)
+
+        # Провайдер-агностичный LLM-клиент (модель/эндпоинт — из настроек).
+        # Реализацию можно подменить здесь, не трогая прикладной слой (порт LlmClient).
+        self.llm: LlmClient = OpenAICompatibleLlmClient(self.settings.llm)
 
         # Application layer
         self.registration = RegistrationService(self.worker_repo, self.sheets_gateway)

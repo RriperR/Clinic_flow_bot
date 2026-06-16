@@ -1,4 +1,5 @@
 aiogram
+aiohttp
 SQLAlchemy[asyncio]
 alembic
 asyncpg

@@ -35,10 +35,23 @@ class SheetsSettings:
 
 
 @dataclass
+class LlmSettings:
+    # Провайдер-агностичные настройки. base_url задаёт провайдера (любой
+    # OpenAI-совместимый эндпоинт: OpenAI, OpenRouter, локальный сервер,
+    # совместимый режим Anthropic и т.п.), model — модель по умолчанию.
+    api_key: str
+    base_url: str
+    model: str
+    max_tokens: int
+    timeout: float
+
+
+@dataclass
 class Settings:
     bot: BotSettings
     db: DbSettings
     sheets: SheetsSettings
+    llm: LlmSettings
     log_dir: Path
 
 
@@ -77,9 +90,18 @@ def load_settings() -> Settings:
         ],
     )
 
+    llm = LlmSettings(
+        api_key=os.getenv("LLM_API_KEY", ""),
+        base_url=os.getenv("LLM_BASE_URL", "").rstrip("/"),
+        model=os.getenv("LLM_MODEL", ""),
+        max_tokens=int(os.getenv("LLM_MAX_TOKENS", "1024")),
+        timeout=float(os.getenv("LLM_TIMEOUT", "30")),
+    )
+
     return Settings(
         bot=bot,
         db=db,
         sheets=sheets,
+        llm=llm,
         log_dir=log_dir,
     )
