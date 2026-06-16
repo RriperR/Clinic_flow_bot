@@ -1,6 +1,7 @@
 from app.application.agent.tools import Tool, ToolRegistry
 from app.application.agent.use_case import AgentService
 from app.application.llm.ports import LlmCompletion, LlmMessage, LlmRole, ToolCall, ToolSpec
+from app.domain.entities import Worker
 
 
 class ScriptedLlmClient:
@@ -16,7 +17,7 @@ class ScriptedLlmClient:
 
 
 def _echo_tool(recorder: list[dict]) -> Tool:
-    async def handler(arguments: dict) -> str:
+    async def handler(arguments: dict, _context) -> str:
         recorder.append(arguments)
         return "tool-result"
 
@@ -55,14 +56,34 @@ async def test_agent_returns_text_without_tools() -> None:
     assert len(llm.calls) == 1
 
 
+class FakeShiftTargets:
+    async def list_all_doctors(self):
+        return [Worker(id=1, full_name="Иванова Мария Сергеевна")]
+
+
+async def test_agent_sends_only_sanitized_shift_target_to_llm() -> None:
+    llm = ScriptedLlmClient([LlmCompletion(text="Можно к [SHIFT_TARGET_1].")])
+    agent = AgentService(llm, ToolRegistry(), system_prompt="sys", shift_service=FakeShiftTargets())
+
+    result = await agent.run_with_context(100, "Можно записаться к Ивановой?")
+
+    assert result.text == "Можно к Иванова Мария Сергеевна."
+    assert result.sanitized_user_message == "Можно записаться к [SHIFT_TARGET_1]?"
+    sent_content = "\n".join(message.content for message in llm.calls[0])
+    assert "Иванова" not in sent_content
+    assert "[SHIFT_TARGET_1]" in sent_content
+
+
 async def test_registry_reports_unknown_tool() -> None:
     registry = ToolRegistry()
-    assert await registry.invoke("missing", {}) == "Error: unknown tool 'missing'"
+    result = await registry.invoke("missing", {})
+    assert result.content == "Error: unknown tool 'missing'"
 
 
 async def test_registry_wraps_handler_errors() -> None:
-    async def boom(_arguments: dict) -> str:
+    async def boom(_arguments: dict, _context) -> str:
         raise ValueError("nope")
 
     registry = ToolRegistry([Tool(ToolSpec(name="boom", description="d", parameters={}), boom)])
-    assert await registry.invoke("boom", {}) == "Error: ValueError: nope"
+    result = await registry.invoke("boom", {})
+    assert result.content == "Error: ValueError: nope"

@@ -1,7 +1,8 @@
 import json
 from typing import Any
 
-from app.application.agent.tools import Tool, ToolRegistry
+from app.application.agent.shift_tools import build_shift_tools
+from app.application.agent.tools import AgentToolContext, Tool, ToolRegistry
 from app.application.knowledge_base.dto import KnowledgeContentItem
 from app.application.knowledge_base.use_case import KnowledgeBaseService
 from app.application.llm.ports import ToolSpec
@@ -39,15 +40,15 @@ def build_tool_registry(knowledge_base: KnowledgeBaseService, shift_service: Shi
     намеренно не выставлены — их гейтят отдельные команды бота.
     """
 
-    async def list_knowledge_sections(_arguments: dict[str, Any]) -> str:
+    async def list_knowledge_sections(_arguments: dict[str, Any], _context: AgentToolContext | None) -> str:
         sections = await knowledge_base.list_sections()
         return json.dumps([{"id": s.id, "title": s.title} for s in sections], ensure_ascii=False)
 
-    async def list_section_manipulations(arguments: dict[str, Any]) -> str:
+    async def list_section_manipulations(arguments: dict[str, Any], _context: AgentToolContext | None) -> str:
         manipulations = await knowledge_base.list_manipulations(int(arguments["section_id"]))
         return json.dumps([{"id": m.id, "title": m.title} for m in manipulations], ensure_ascii=False)
 
-    async def get_manipulation_content(arguments: dict[str, Any]) -> str:
+    async def get_manipulation_content(arguments: dict[str, Any], _context: AgentToolContext | None) -> str:
         content = await knowledge_base.get_manipulation_content(int(arguments["manipulation_id"]))
         return json.dumps(
             {
@@ -66,7 +67,7 @@ def build_tool_registry(knowledge_base: KnowledgeBaseService, shift_service: Shi
             ensure_ascii=False,
         )
 
-    async def list_free_shifts_today(_arguments: dict[str, Any]) -> str:
+    async def list_free_shifts_today(_arguments: dict[str, Any], _context: AgentToolContext | None) -> str:
         shift_type, shift_date = shift_service.guess_shift_type_from_now()
         if shift_type is None:
             return "Сейчас не время записи на смену (доступно с 07:30 до 21:00)."
@@ -75,7 +76,10 @@ def build_tool_registry(knowledge_base: KnowledgeBaseService, shift_service: Shi
             {
                 "date": shift_date.isoformat(),
                 "shift_type": str(shift_type),
-                "doctors": [option.label for option in options],
+                "free_shift_count": len(options),
+                "privacy_note": (
+                    "Names are hidden from the LLM. Ask the user to open /shift if they need the full list."
+                ),
             },
             ensure_ascii=False,
         )
@@ -126,10 +130,14 @@ def build_tool_registry(knowledge_base: KnowledgeBaseService, shift_service: Shi
             Tool(
                 ToolSpec(
                     name="list_free_shifts_today",
-                    description="Свободные смены на текущий слот (утро/вечер): список врачей. Только чтение.",
+                    description=(
+                        "Свободные смены на текущий слот (утро/вечер): только количество, без имён сотрудников. "
+                        "Для полного списка направь пользователя в /shift."
+                    ),
                     parameters=_NO_ARGS,
                 ),
                 list_free_shifts_today,
             ),
+            *build_shift_tools(shift_service),
         ]
     )

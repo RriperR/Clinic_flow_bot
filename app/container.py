@@ -109,6 +109,7 @@ class Container:
             self.llm,
             build_tool_registry(self.knowledge_base, self.shift_service),
             AGENT_SYSTEM_PROMPT,
+            shift_service=self.shift_service,
         )
 
 

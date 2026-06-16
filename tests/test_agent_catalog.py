@@ -38,7 +38,7 @@ async def test_knowledge_tool_returns_formatted_text_for_verbatim_answer() -> No
     registry = build_tool_registry(FakeKnowledgeBase(), FakeShiftService())
 
     raw_result = await registry.invoke("get_manipulation_content", {"manipulation_id": 10})
-    result = json.loads(raw_result)
+    result = json.loads(raw_result.content)
 
     assert result["kind"] == "knowledge_base_content"
     assert result["formatted_text"] == "📌 КАРИЕС\nИНСТРУМЕНТЫ\n1. Лоток\nМАТЕРИАЛЫ\n1. Перчатки — ВАЖНО!!!"
