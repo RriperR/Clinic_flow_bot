@@ -1,12 +1,12 @@
 from app.application.knowledge_base.dto import KnowledgeManipulationContent
 
 SECTION_EMOJIS = {
-    "РРќРЎРўР РЈРњР•РќРўР«": "рџ› ",
-    "РњРђРўР•Р РРђР›": "рџ§±",
-    "РћР‘РћР РЈР”РћР’РђРќРР•": "рџ’»",
-    "Р”Рћ РџР РР•РњРђ": "рџ•”",
-    "Р’Рћ Р’Р Р•РњРЇ РџР РР•РњРђ": "рџ••",
-    "РџРћРЎР›Р• РџР РР•РњРђ": "рџ•—",
+    "ИНСТРУМЕНТЫ": "🛠",
+    "МАТЕРИАЛ": "🧱",
+    "ОБОРУДОВАНИЕ": "💻",
+    "ДО ПРИЕМА": "🕔",
+    "ВО ВРЕМЯ ПРИЕМА": "🕕",
+    "ПОСЛЕ ПРИЕМА": "🕗",
 }
 
 
@@ -35,7 +35,7 @@ def format_knowledge_manipulation(content: KnowledgeManipulationContent) -> str:
 
     if lines:
         return "\n".join(lines)
-    return "РќРµС‚ РёРЅС„РѕСЂРјР°С†РёРё РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ РјР°РЅРёРїСѓР»СЏС†РёРё."
+    return "Нет информации для выбранной манипуляции."
 
 
 def _format_knowledge_item(item_number: str, item_text: str, extra: str) -> str:
@@ -43,6 +43,6 @@ def _format_knowledge_item(item_number: str, item_text: str, extra: str) -> str:
     extra_text = extra.strip()
     if not extra_text:
         return line
-    if extra_text.upper() == "Р’РђР–РќРћ!!!":
-        return f"{line} вќ—вќ—вќ—"
-    return f"{line} вЂ” {extra_text}"
+    if extra_text.upper() == "ВАЖНО!!!":
+        return f"{line} ❗❗❗"
+    return f"{line} — {extra_text}"
